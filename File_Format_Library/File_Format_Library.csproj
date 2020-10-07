@@ -224,6 +224,7 @@
     <Compile Include="FileFormats\Archives\LZS.cs" />
     <Compile Include="FileFormats\Archives\QuickAccess\QuickAccessFile.cs" />
     <Compile Include="FileFormats\Archives\QuickAccess\QuickAccessFolder.cs" />
+    <Compile Include="FileFormats\Archives\TRB.cs" />
     <Compile Include="FileFormats\Archives\WTA.cs" />
     <Compile Include="FileFormats\Audio\BARS\BarsFile.cs" />
     <Compile Include="FileFormats\BCH\BCH.cs" />

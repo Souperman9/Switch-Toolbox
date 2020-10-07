@@ -65,7 +65,28 @@ namespace FirstPlugin
                 header.tagSize = reader.ReadUInt32();
                 header.relocationDataOffset = reader.ReadUInt32();
                 header.relocationDataSize = reader.ReadUInt32();
+                reader.Position += 92;
                 Console.WriteLine(header.magic);
+
+                for (int i = 0; i < header.dataInfoCount; i++)
+                {
+                    DataInfos[i] = new DataInfo()
+                    {
+                        unknown1 = reader.ReadUInt32(),
+                        textOffset = reader.ReadUInt32(),
+                        unknown2 = reader.ReadUInt32(),
+                        unknown3 = reader.ReadUInt32(),
+                        dataSize = reader.ReadUInt32(),
+                        dataSize2 = reader.ReadUInt32(),
+                        dataOffset = reader.ReadUInt32(),
+                        unknown4 = reader.ReadUInt32(),
+                        zero1 = reader.ReadUInt32(),
+                        zero2 = reader.ReadUInt32(),
+                        zero3 = reader.ReadUInt32(),
+                        zero4 = reader.ReadUInt32()
+                    };
+                }
+                
 
             }
         }
@@ -116,5 +137,22 @@ namespace FirstPlugin
             public uint relocationDataOffset;
             public uint relocationDataSize;
         }
+        public class DataInfo
+        {
+            public uint unknown1;
+            public uint textOffset;
+            public uint unknown2;
+            public uint unknown3;
+            public uint dataSize;
+            public uint dataSize2;
+            public uint dataOffset;
+            public uint unknown4;
+            public uint zero1;
+            public uint zero2;
+            public uint zero3;
+            public uint zero4;
+        }
+
+        public DataInfo[] DataInfos { get; set; }
     }
 }

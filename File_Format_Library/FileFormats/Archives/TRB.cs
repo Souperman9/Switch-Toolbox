@@ -67,10 +67,12 @@ namespace FirstPlugin
                 header.relocationDataSize = reader.ReadUInt32();
                 reader.Position += 92;
                 Console.WriteLine(header.magic);
+                DataInfo[] dataInfos = new DataInfo[header.dataInfoCount];
 
                 for (int i = 0; i < header.dataInfoCount; i++)
                 {
-                    DataInfos[i] = new DataInfo()
+                    
+                    dataInfos[i] = new DataInfo()
                     {
                         unknown1 = reader.ReadUInt32(),
                         textOffset = reader.ReadUInt32(),
@@ -85,6 +87,7 @@ namespace FirstPlugin
                         zero3 = reader.ReadUInt32(),
                         zero4 = reader.ReadUInt32()
                     };
+                    Console.WriteLine(dataInfos[i].dataOffset);
                 }
                 
 
@@ -153,6 +156,5 @@ namespace FirstPlugin
             public uint zero4;
         }
 
-        public DataInfo[] DataInfos { get; set; }
     }
 }

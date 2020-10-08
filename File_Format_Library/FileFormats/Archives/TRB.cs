@@ -64,10 +64,11 @@ namespace FirstPlugin
                 header.tagCount = reader.ReadUInt32();
                 header.tagSize = reader.ReadUInt32();
                 header.relocationDataOffset = reader.ReadUInt32();
-                header.relocationDataSize = reader.ReadUInt32();
+                header.relocationDataSize = reader.ReadInt32();
                 reader.Position += 92;
                 Console.WriteLine(header.magic);
                 DataInfo[] dataInfos = new DataInfo[header.dataInfoCount];
+                TagInfo[] tagInfos = new TagInfo[header.tagCount];
 
                 for (int i = 0; i < header.dataInfoCount; i++)
                 {
@@ -78,7 +79,7 @@ namespace FirstPlugin
                         textOffset = reader.ReadUInt32(),
                         unknown2 = reader.ReadUInt32(),
                         unknown3 = reader.ReadUInt32(),
-                        dataSize = reader.ReadUInt32(),
+                        dataSize = reader.ReadInt32(),
                         dataSize2 = reader.ReadUInt32(),
                         dataOffset = reader.ReadUInt32(),
                         unknown4 = reader.ReadUInt32(),
@@ -90,7 +91,36 @@ namespace FirstPlugin
                     Console.WriteLine(dataInfos[i].dataOffset);
                 }
                 
+                for (int i = 0; i < header.tagCount; i++)
+                {
 
+                    tagInfos[i] = new TagInfo()
+                    {
+                        magic = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(4)),
+                        dataOffset = reader.ReadUInt32(),
+                        flag = reader.ReadUInt32(),
+                        textOffset = reader.ReadInt32()
+                    };
+                    Console.WriteLine(tagInfos[i].dataOffset);
+                }
+                reader.Position = dataInfos[0].dataOffset;
+                byte[] textData = reader.ReadBytes(dataInfos[0].dataSize);
+                reader.Position = dataInfos[1].dataOffset;
+                byte[] rawData = reader.ReadBytes(dataInfos[1].dataSize);
+                if (header.dataInfoCount > 2)
+                {
+                    reader.Position = dataInfos[2].dataOffset;
+                    byte[] extraData = reader.ReadBytes(dataInfos[2].dataSize);
+                }
+                reader.Position = header.relocationDataOffset;
+                byte[] relocationData = reader.ReadBytes(header.relocationDataSize);
+                Console.WriteLine(reader.Position);
+                for (int i = 0; i < header.tagCount; i++)
+                {
+                    reader.Position = dataInfos[0].dataOffset + tagInfos[i].textOffset;
+                    string filename = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(tagInfos[i + 1].textOffset - tagInfos[i].textOffset - 1)) + tagInfos[i].magic;
+                    Console.WriteLine(filename);
+                }
             }
         }
         public void Unload() //This is used when the file format is disposed of
@@ -138,7 +168,7 @@ namespace FirstPlugin
             public uint tagCount;
             public uint tagSize;
             public uint relocationDataOffset;
-            public uint relocationDataSize;
+            public int relocationDataSize;
         }
         public class DataInfo
         {
@@ -146,7 +176,7 @@ namespace FirstPlugin
             public uint textOffset;
             public uint unknown2;
             public uint unknown3;
-            public uint dataSize;
+            public int dataSize;
             public uint dataSize2;
             public uint dataOffset;
             public uint unknown4;
@@ -154,6 +184,14 @@ namespace FirstPlugin
             public uint zero2;
             public uint zero3;
             public uint zero4;
+        }
+
+        public class TagInfo
+        {
+            public string magic;
+            public uint dataOffset;
+            public uint flag;
+            public int textOffset;
         }
 
     }

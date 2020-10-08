@@ -52,6 +52,7 @@ namespace FirstPlugin
         {
             using (var reader = new FileReader(stream))
             {
+                // Read header for data locations
                 files.Clear();
                 reader.ByteOrder = ByteOrder.LittleEndian;
                 TRB.Header header = new TRB.Header();
@@ -66,13 +67,13 @@ namespace FirstPlugin
                 header.relocationDataOffset = reader.ReadUInt32();
                 header.relocationDataSize = reader.ReadInt32();
                 reader.Position += 92;
-                Console.WriteLine(header.magic);
+                // Create arrays for multiple data and tag info objects
                 DataInfo[] dataInfos = new DataInfo[header.dataInfoCount];
                 TagInfo[] tagInfos = new TagInfo[header.tagCount];
 
                 for (int i = 0; i < header.dataInfoCount; i++)
                 {
-                    
+                    // Create and assign properties to a new DataInfo until the count specified in the header is reached
                     dataInfos[i] = new DataInfo()
                     {
                         unknown1 = reader.ReadUInt32(),
@@ -88,38 +89,43 @@ namespace FirstPlugin
                         zero3 = reader.ReadUInt32(),
                         zero4 = reader.ReadUInt32()
                     };
-                    Console.WriteLine(dataInfos[i].dataOffset);
                 }
                 
                 for (int i = 0; i < header.tagCount; i++)
                 {
-
+                    // Get tags for file extensions, data, and names
                     tagInfos[i] = new TagInfo()
                     {
                         magic = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(4)),
-                        dataOffset = reader.ReadUInt32(),
+                        dataOffset = reader.ReadInt32(),
                         flag = reader.ReadUInt32(),
                         textOffset = reader.ReadInt32()
                     };
-                    Console.WriteLine(tagInfos[i].dataOffset);
                 }
-                reader.Position = dataInfos[0].dataOffset;
-                //byte[] textData = reader.ReadBytes(dataInfos[0].dataSize);
-                reader.Position = dataInfos[1].dataOffset;
-                byte[] rawData = reader.ReadBytes(dataInfos[1].dataSize);
+
+                // Get extra data, currently unused
                 if (header.dataInfoCount > 2)
                 {
                     reader.Position = dataInfos[2].dataOffset;
                     byte[] extraData = reader.ReadBytes(dataInfos[2].dataSize);
                 }
+
+                // Get relocation data and write to byte array
                 reader.Position = header.relocationDataOffset;
                 byte[] relocationData = reader.ReadBytes(header.relocationDataSize);
-                Console.WriteLine(reader.Position);
-                for (int i = 0; i < header.tagCount; i++)
+
+                // Compile filenames and add as files
+                for (long i = 0; i < header.tagCount - 1; i++)
                 {
                     reader.Position = dataInfos[0].dataOffset + tagInfos[i].textOffset;
                     string filename = reader.ReadZeroTerminatedString() + "." + tagInfos[i].magic.ToLower();
-                    Console.WriteLine(filename);
+                    reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset;
+                    FileEntry file = new FileEntry()
+                    {
+                        FileName = filename,
+                        FileData = reader.ReadBytes(tagInfos[i + 1].dataOffset - tagInfos[i].dataOffset)
+                    };
+                    files.Add(file);
                 }
             }
         }
@@ -189,10 +195,11 @@ namespace FirstPlugin
         public class TagInfo
         {
             public string magic;
-            public uint dataOffset;
+            public int dataOffset;
             public uint flag;
             public int textOffset;
         }
+
 
     }
 }

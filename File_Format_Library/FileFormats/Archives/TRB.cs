@@ -14,7 +14,7 @@ namespace FirstPlugin
         public FileType FileType { get; set; } = FileType.Archive;
 
         public bool CanSave { get; set; }
-        public string[] Description { get; set; } = new string[] { "de Blob 2 Archive (TRB)" };
+        public string[] Description { get; set; } = new string[] { "de Blob 2 Archive" };
         public string[] Extension { get; set; } = new string[] { "*.trb" };
         public string FileName { get; set; }
         public string FilePath { get; set; }
@@ -39,9 +39,9 @@ namespace FirstPlugin
 
         public bool CanAddFiles => throw new NotImplementedException();
 
-        public bool CanRenameFiles => throw new NotImplementedException();
+        public bool CanRenameFiles { get; set; } = true;
 
-        public bool CanReplaceFiles => throw new NotImplementedException();
+        public bool CanReplaceFiles { get; set; } = false;
 
         public bool CanDeleteFiles => throw new NotImplementedException();
         
@@ -82,7 +82,7 @@ namespace FirstPlugin
                         unknown3 = reader.ReadUInt32(),
                         dataSize = reader.ReadInt32(),
                         dataSize2 = reader.ReadUInt32(),
-                        dataOffset = reader.ReadUInt32(),
+                        dataOffset = reader.ReadInt32(),
                         unknown4 = reader.ReadUInt32(),
                         zero1 = reader.ReadUInt32(),
                         zero2 = reader.ReadUInt32(),
@@ -118,7 +118,8 @@ namespace FirstPlugin
                 for (long i = 0; i < header.tagCount - 1; i++)
                 {
                     reader.Position = dataInfos[0].dataOffset + tagInfos[i].textOffset;
-                    string filename = reader.ReadZeroTerminatedString() + "." + tagInfos[i].magic.ToLower();
+                    string filename = reader.ReadZeroTerminatedString();
+                    if (!tagInfos[i].magic.StartsWith("\0")) filename = filename + "." + tagInfos[i].magic.ToLower();
                     reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset;
                     FileEntry file = new FileEntry()
                     {
@@ -127,6 +128,17 @@ namespace FirstPlugin
                     };
                     files.Add(file);
                 }
+                TagInfo lastTag = tagInfos[header.tagCount - 1];
+                reader.Position = dataInfos[0].dataOffset + lastTag.textOffset;
+                string filename2 = reader.ReadZeroTerminatedString();
+                if (!lastTag.magic.StartsWith("\0")) filename2 = filename2 + "." + lastTag.magic.ToLower();
+                reader.Position = dataInfos[1].dataOffset + lastTag.dataOffset;
+                FileEntry file2 = new FileEntry()
+                {
+                    FileName = filename2,
+                    FileData = reader.ReadBytes(dataInfos[1].dataOffset + dataInfos[1].dataSize - lastTag.dataOffset)
+                };
+                files.Add(file2);
             }
         }
         public void Unload() //This is used when the file format is disposed of
@@ -184,7 +196,7 @@ namespace FirstPlugin
             public uint unknown3;
             public int dataSize;
             public uint dataSize2;
-            public uint dataOffset;
+            public int dataOffset;
             public uint unknown4;
             public uint zero1;
             public uint zero2;

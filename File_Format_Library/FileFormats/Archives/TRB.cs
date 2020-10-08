@@ -9,11 +9,11 @@ using Toolbox.Library.IO;
 
 namespace FirstPlugin
 {
-    public class TRB : IArchiveFile, IFileFormat
+    public class TRB : TreeNodeFile, IArchiveFile, IFileFormat
     {
         public FileType FileType { get; set; } = FileType.Archive;
 
-        public bool CanSave { get; set; } = true;
+        public bool CanSave { get; set; } = false;
         public string[] Description { get; set; } = new string[] { "de Blob 2 Archive" };
         public string[] Extension { get; set; } = new string[] { "*.trb" };
         public string FileName { get; set; }
@@ -47,9 +47,6 @@ namespace FirstPlugin
 
         public List<FileEntry> files = new List<FileEntry>();
         public IEnumerable<ArchiveFileInfo> Files => files;
-
-        public List<DDS> TextureList { get; set; }
-
         public bool DisplayIcons => throw new NotImplementedException();
 
         public void Load(System.IO.Stream stream)
@@ -119,8 +116,10 @@ namespace FirstPlugin
                 byte[] relocationData = reader.ReadBytes(header.relocationDataSize);
 
                 // Compile filenames and add as files
+                bool isPtex;
                 for (long i = 0; i < header.tagCount - 1; i++)
                 {
+                    isPtex = false;
                     reader.Position = dataInfos[0].dataOffset + tagInfos[i].textOffset;
                     string filename = reader.ReadZeroTerminatedString();
                     if (!tagInfos[i].magic.StartsWith("\0")) filename = filename + "." + tagInfos[i].magic.ToLower();
@@ -132,6 +131,7 @@ namespace FirstPlugin
                     };
                     if (tagInfos[i].magic == "PTEX")
                     {
+                        isPtex = true;
                         reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset + 88;
                         Ptex ptex = new Ptex()
                         {
@@ -143,10 +143,19 @@ namespace FirstPlugin
                         };
                         reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
                         reader.Position += ptex.ddsOffset;
-                        file.FileName = filename + ".dds";
-                        file.FileData = reader.ReadBytes(ptex.ddsSize);
+                        DDS dds = new DDS(reader.ReadBytes(ptex.ddsSize))
+                        {
+                            WiiUSwizzle = false,
+                            FileType = FileType.Image,
+                            Text = filename
+                        };
+                        reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
+                        reader.Position += ptex.ddsOffset;
+                        Nodes.Add(dds);
+                        FileType = FileType.Image;
+                        //file.FileData = reader.ReadBytes(ptex.ddsSize);
                     }
-                    files.Add(file);
+                    if (!isPtex) files.Add(file);
                 }
                 TagInfo lastTag = tagInfos[header.tagCount - 1];
                 reader.Position = dataInfos[0].dataOffset + lastTag.textOffset;
@@ -158,7 +167,32 @@ namespace FirstPlugin
                     FileName = filename2,
                     FileData = reader.ReadBytes(dataInfos[1].dataSize - lastTag.dataOffset)
                 };
-                files.Add(file2);
+                if (tagInfos[header.tagCount - 1].magic == "PTEX")
+                {
+                    isPtex = true;
+                    reader.Position = dataInfos[1].dataOffset + tagInfos[header.tagCount - 1].dataOffset + 88;
+                    Ptex ptex = new Ptex()
+                    {
+                        width = reader.ReadUInt32(),
+                        height = reader.ReadUInt32(),
+                        unknown = reader.ReadUInt32(),
+                        ddsOffset = reader.ReadUInt32(),
+                        ddsSize = reader.ReadInt32()
+                    };
+                    reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
+                    reader.Position += ptex.ddsOffset;
+                    DDS dds = new DDS(reader.ReadBytes(ptex.ddsSize))
+                    {
+                        WiiUSwizzle = false,
+                        FileType = FileType.Image,
+                        Text = filename2
+                    };
+                    reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
+                    reader.Position += ptex.ddsOffset;
+                    Nodes.Add(dds);
+                    FileType = FileType.Image;
+                    if (!isPtex) files.Add(file2);
+                }
             }
         }
         public void Unload() //This is used when the file format is disposed of

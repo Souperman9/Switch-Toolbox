@@ -13,7 +13,7 @@ namespace FirstPlugin
     {
         public FileType FileType { get; set; } = FileType.Archive;
 
-        public bool CanSave { get; set; }
+        public bool CanSave { get; set; } = true;
         public string[] Description { get; set; } = new string[] { "de Blob 2 Archive" };
         public string[] Extension { get; set; } = new string[] { "*.trb" };
         public string FileName { get; set; }
@@ -37,16 +37,20 @@ namespace FirstPlugin
             }
         }
 
-        public bool CanAddFiles => throw new NotImplementedException();
+        public bool CanAddFiles { get; set; } = true;
 
         public bool CanRenameFiles { get; set; } = true;
 
-        public bool CanReplaceFiles { get; set; } = false;
+        public bool CanReplaceFiles { get; set; } = true;
 
-        public bool CanDeleteFiles => throw new NotImplementedException();
-        
+        public bool CanDeleteFiles { get; set; } = true;
+
         public List<FileEntry> files = new List<FileEntry>();
         public IEnumerable<ArchiveFileInfo> Files => files;
+
+        public List<DDS> TextureList { get; set; }
+
+        public bool DisplayIcons => throw new NotImplementedException();
 
         public void Load(System.IO.Stream stream)
         {
@@ -126,6 +130,22 @@ namespace FirstPlugin
                         FileName = filename,
                         FileData = reader.ReadBytes(tagInfos[i + 1].dataOffset - tagInfos[i].dataOffset)
                     };
+                    if (tagInfos[i].magic == "PTEX")
+                    {
+                        reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset + 88;
+                        Ptex ptex = new Ptex()
+                        {
+                            width = reader.ReadUInt32(),
+                            height = reader.ReadUInt32(),
+                            unknown = reader.ReadUInt32(),
+                            ddsOffset = reader.ReadUInt32(),
+                            ddsSize = reader.ReadInt32()
+                        };
+                        reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
+                        reader.Position += ptex.ddsOffset;
+                        file.FileName = filename + ".dds";
+                        file.FileData = reader.ReadBytes(ptex.ddsSize);
+                    }
                     files.Add(file);
                 }
                 TagInfo lastTag = tagInfos[header.tagCount - 1];
@@ -136,7 +156,7 @@ namespace FirstPlugin
                 FileEntry file2 = new FileEntry()
                 {
                     FileName = filename2,
-                    FileData = reader.ReadBytes(dataInfos[1].dataOffset + dataInfos[1].dataSize - lastTag.dataOffset)
+                    FileData = reader.ReadBytes(dataInfos[1].dataSize - lastTag.dataOffset)
                 };
                 files.Add(file2);
             }
@@ -212,6 +232,14 @@ namespace FirstPlugin
             public int textOffset;
         }
 
+        public class Ptex
+        {
+            public uint width;
+            public uint height;
+            public uint unknown;
+            public uint ddsOffset;
+            public int ddsSize;
+        }
 
     }
 }

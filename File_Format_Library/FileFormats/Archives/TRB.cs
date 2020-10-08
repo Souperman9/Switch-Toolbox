@@ -104,7 +104,7 @@ namespace FirstPlugin
                     Console.WriteLine(tagInfos[i].dataOffset);
                 }
                 reader.Position = dataInfos[0].dataOffset;
-                byte[] textData = reader.ReadBytes(dataInfos[0].dataSize);
+                //byte[] textData = reader.ReadBytes(dataInfos[0].dataSize);
                 reader.Position = dataInfos[1].dataOffset;
                 byte[] rawData = reader.ReadBytes(dataInfos[1].dataSize);
                 if (header.dataInfoCount > 2)
@@ -118,7 +118,7 @@ namespace FirstPlugin
                 for (int i = 0; i < header.tagCount; i++)
                 {
                     reader.Position = dataInfos[0].dataOffset + tagInfos[i].textOffset;
-                    string filename = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(tagInfos[i + 1].textOffset - tagInfos[i].textOffset - 1)) + tagInfos[i].magic;
+                    string filename = reader.ReadZeroTerminatedString() + "." + tagInfos[i].magic.ToLower();
                     Console.WriteLine(filename);
                 }
             }

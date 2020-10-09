@@ -264,7 +264,6 @@ namespace FirstPlugin
             
             using (var writer = new FileWriter(stream))
             {
-                int zero = 0;
                 writer.ByteOrder = Syroot.BinaryData.ByteOrder.LittleEndian;
                 writer.WriteString("TRB", System.Text.Encoding.ASCII);
                 writer.Write(header.version);
@@ -335,7 +334,7 @@ namespace FirstPlugin
                 writer.Write(relocationData);
                 while (writer.Position < fileSize)
                 {
-                    writer.Write(zero);
+                    writer.Write(new byte());
                 }
 
                 if (ptexCount != 0)
@@ -377,7 +376,7 @@ namespace FirstPlugin
                         // Padding
                         while (writer.Position < ptexList[i].ddsSize + saveData[header.dataInfoCount - 1].dataOffset + ptexList[i].ddsOffset)
                         {
-                            writer.Write(zero);
+                            writer.Write(new byte());
                         }
 
                     }

@@ -9,6 +9,7 @@ using Toolbox.Library.IO;
 using System.Security.Cryptography.X509Certificates;
 using SPICA.Formats.Common;
 using System.Linq;
+using SFGraphics.GLObjects.Shaders.ShaderEventArgs;
 
 namespace FirstPlugin
 {
@@ -60,12 +61,19 @@ namespace FirstPlugin
 
         TRB.Header header = new TRB.Header();
 
+        byte[] extraData;
+
+        byte[] relocationData;
+
         DataInfo[] saveData;
 
         TagInfo[] saveTag;
 
+        long fileSize;
+
         public void Load(System.IO.Stream stream)
         {
+            fileSize = stream.Length;
             using (var reader = new FileReader(stream))
             {
                 ptexCount = 0;
@@ -124,22 +132,20 @@ namespace FirstPlugin
                 }
                 
 
-                // Get extra data, currently unused
+                // Get extra data, currently unused except for saving the file
                 if (header.dataInfoCount > 2)
                 {
                     reader.Position = dataInfos[2].dataOffset;
-                    byte[] extraData = reader.ReadBytes(dataInfos[2].dataSize);
+                    extraData = reader.ReadBytes(dataInfos[2].dataSize);
                 }
 
                 // Get relocation data and write to byte array
                 reader.Position = header.relocationDataOffset;
-                byte[] relocationData = reader.ReadBytes(header.relocationDataSize);
+                relocationData = reader.ReadBytes(header.relocationDataSize);
 
                 // Compile filenames and add as files
-                bool isPtex;
                 for (long i = 0; i < header.tagCount - 1; i++)
                 {
-                    isPtex = false;
                     reader.Position = dataInfos[0].dataOffset + tagInfos[i].textOffset;
                     string filename = reader.ReadZeroTerminatedString();
                     tagInfos[i].name = filename;
@@ -216,7 +222,7 @@ namespace FirstPlugin
                         FileType = FileType.Image,
                         Text = filename2 + ".dds",
                         FileName = filename2,
-                        CanReplace = true
+                        CanReplace = true,
                     };
                     reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
                     reader.Position += ptex.ddsOffset;
@@ -258,6 +264,7 @@ namespace FirstPlugin
             
             using (var writer = new FileWriter(stream))
             {
+                int zero = 0;
                 writer.ByteOrder = Syroot.BinaryData.ByteOrder.LittleEndian;
                 writer.WriteString("TRB", System.Text.Encoding.ASCII);
                 writer.Write(header.version);
@@ -270,6 +277,8 @@ namespace FirstPlugin
                 writer.Write(header.relocationDataOffset);
                 writer.Write(header.relocationDataSize);
                 writer.Position += 92;
+
+
                 for (var i = 0; i < header.dataInfoCount; i++)
                 {
                     writer.Write(saveData[i].unknown1);
@@ -285,6 +294,8 @@ namespace FirstPlugin
                     writer.Write(saveData[i].zero3);
                     writer.Write(saveData[i].zero4);
                 }
+
+
                 for (var i = 0; i < header.tagCount; i++)
                 {
                     writer.WriteNullTerminatedStringUtf8(saveTag[i].magic);
@@ -292,11 +303,15 @@ namespace FirstPlugin
                     writer.Write(saveTag[i].flag);
                     writer.Write(saveTag[i].textOffset);
                 }
+
+
                 writer.Position = saveData[0].dataOffset;
                 writer.WriteNullTerminatedStringUtf8(".text");
                 writer.Position += 1;
                 writer.WriteNullTerminatedStringUtf8(".data");
                 writer.Position += 1;
+
+
                 for (var i = 0; i < header.tagCount; i++)
                 {
                     writer.Position = saveTag[i].textOffset + saveData[0].dataOffset;
@@ -309,10 +324,25 @@ namespace FirstPlugin
                     writer.Position = saveData[1].dataOffset + saveTag[i].dataOffset;
                     writer.Write(files[i].FileData);
                 }
+
+                if (header.dataInfoCount > 2)
+                {
+                    writer.Position = saveData[2].dataOffset;
+                    writer.Write(extraData);
+                }
+
+                writer.Position = header.relocationDataOffset;
+                writer.Write(relocationData);
+                while (writer.Position < fileSize)
+                {
+                    writer.Write(zero);
+                }
+
                 if (ptexCount != 0)
                 {
                     for (var i = 0; i < ptexCount; i++)
                     {
+                        ddsList[i].IsDX10 = false;
                         writer.Position = ptexList[i].ddsOffset + saveData[header.dataInfoCount - 1].dataOffset;
                         writer.WriteString("DDS ", System.Text.Encoding.ASCII);
                         writer.Position -= 1;
@@ -323,10 +353,12 @@ namespace FirstPlugin
                         writer.Write(ddsList[i].header.pitchOrLinearSize);
                         writer.Write(ddsList[i].header.depth);
                         writer.Write(ddsList[i].header.mipmapCount);
+
                         for (var t = 0; t < ddsList[i].header.reserved1.Length; t++)
                         {
                             writer.Write(ddsList[i].header.reserved1[t]);
                         }
+
                         writer.Write(ddsList[i].header.ddspf.size);
                         writer.Write(ddsList[i].header.ddspf.flags);
                         writer.Write(ddsList[i].header.ddspf.fourCC);
@@ -341,6 +373,12 @@ namespace FirstPlugin
                         writer.Write(ddsList[i].header.caps4);
                         writer.Write(ddsList[i].header.reserved2);
                         writer.Write(ddsList[i].bdata);
+
+                        // Padding
+                        while (writer.Position < ptexList[i].ddsSize + saveData[header.dataInfoCount - 1].dataOffset + ptexList[i].ddsOffset)
+                        {
+                            writer.Write(zero);
+                        }
 
                     }
                 }

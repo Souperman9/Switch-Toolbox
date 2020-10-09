@@ -50,6 +50,12 @@ namespace FirstPlugin
 
         public List<FileEntry> files = new List<FileEntry>();
         public IEnumerable<ArchiveFileInfo> Files => files;
+
+        public List<Ptex> ptexList = new List<Ptex>();
+
+        public List<DDS> ddsList = new List<DDS>();
+
+        public int ptexCount { get; set; }
         public bool DisplayIcons => throw new NotImplementedException();
 
         TRB.Header header = new TRB.Header();
@@ -62,6 +68,9 @@ namespace FirstPlugin
         {
             using (var reader = new FileReader(stream))
             {
+                ptexCount = 0;
+                ptexList.Clear();
+                ddsList.Clear();
                 // Read header for data locations
                 files.Clear();
                 reader.ByteOrder = ByteOrder.LittleEndian;
@@ -147,6 +156,7 @@ namespace FirstPlugin
                         reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset + 88;
                         Ptex ptex = new Ptex()
                         {
+                            ptexOffset = reader.Position,
                             width = reader.ReadUInt32(),
                             height = reader.ReadUInt32(),
                             unknown = reader.ReadUInt32(),
@@ -159,12 +169,17 @@ namespace FirstPlugin
                         {
                             WiiUSwizzle = false,
                             FileType = FileType.Image,
-                            Text = filename + ".dds"
+                            Text = filename + ".dds",
+                            FileName = filename,
+                            CanReplace = true
                         };
                         reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
                         reader.Position += ptex.ddsOffset;
+                        ptexList.Add(ptex);
                         Nodes.Add(dds);
+                        ddsList.Add(dds);
                         FileType = FileType.Image;
+                        ptexCount++;
                         //file.FileData = reader.ReadBytes(ptex.ddsSize);
                     }
                     files.Add(file);
@@ -186,6 +201,7 @@ namespace FirstPlugin
                     reader.Position = dataInfos[1].dataOffset + tagInfos[header.tagCount - 1].dataOffset + 88;
                     Ptex ptex = new Ptex()
                     {
+                        ptexOffset = reader.Position,
                         width = reader.ReadUInt32(),
                         height = reader.ReadUInt32(),
                         unknown = reader.ReadUInt32(),
@@ -198,12 +214,17 @@ namespace FirstPlugin
                     {
                         WiiUSwizzle = false,
                         FileType = FileType.Image,
-                        Text = filename2 + ".dds"
+                        Text = filename2 + ".dds",
+                        FileName = filename2,
+                        CanReplace = true
                     };
                     reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
                     reader.Position += ptex.ddsOffset;
+                    ptexList.Add(ptex);
                     Nodes.Add(dds);
+                    ddsList.Add(dds);
                     FileType = FileType.Image;
+                    ptexCount++;
                 }
                 files.Add(file2);
             }
@@ -288,7 +309,41 @@ namespace FirstPlugin
                     writer.Position = saveData[1].dataOffset + saveTag[i].dataOffset;
                     writer.Write(files[i].FileData);
                 }
+                if (ptexCount != 0)
+                {
+                    for (var i = 0; i < ptexCount; i++)
+                    {
+                        writer.Position = ptexList[i].ddsOffset + saveData[header.dataInfoCount - 1].dataOffset;
+                        writer.WriteString("DDS ", System.Text.Encoding.ASCII);
+                        writer.Position -= 1;
+                        writer.Write(ddsList[i].header.size);
+                        writer.Write(ddsList[i].header.flags);
+                        writer.Write(ddsList[i].header.height);
+                        writer.Write(ddsList[i].header.width);
+                        writer.Write(ddsList[i].header.pitchOrLinearSize);
+                        writer.Write(ddsList[i].header.depth);
+                        writer.Write(ddsList[i].header.mipmapCount);
+                        for (var t = 0; t < ddsList[i].header.reserved1.Length; t++)
+                        {
+                            writer.Write(ddsList[i].header.reserved1[t]);
+                        }
+                        writer.Write(ddsList[i].header.ddspf.size);
+                        writer.Write(ddsList[i].header.ddspf.flags);
+                        writer.Write(ddsList[i].header.ddspf.fourCC);
+                        writer.Write(ddsList[i].header.ddspf.RGBBitCount);
+                        writer.Write(ddsList[i].header.ddspf.RBitMask);
+                        writer.Write(ddsList[i].header.ddspf.GBitMask);
+                        writer.Write(ddsList[i].header.ddspf.BBitMask);
+                        writer.Write(ddsList[i].header.ddspf.ABitMask);
+                        writer.Write(ddsList[i].header.caps);
+                        writer.Write(ddsList[i].header.caps2);
+                        writer.Write(ddsList[i].header.caps3);
+                        writer.Write(ddsList[i].header.caps4);
+                        writer.Write(ddsList[i].header.reserved2);
+                        writer.Write(ddsList[i].bdata);
 
+                    }
+                }
             }
         }
         
@@ -342,6 +397,7 @@ namespace FirstPlugin
             public uint unknown;
             public uint ddsOffset;
             public int ddsSize;
+            public long ptexOffset;
         }
 
     }

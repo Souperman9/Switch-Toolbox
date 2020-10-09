@@ -6,6 +6,8 @@ using Toolbox.Library;
 using Toolbox.Library.Forms;
 using Syroot.BinaryData;
 using Toolbox.Library.IO;
+using System.Security.Cryptography.X509Certificates;
+using SPICA.Formats.Common;
 
 namespace FirstPlugin
 {
@@ -13,7 +15,7 @@ namespace FirstPlugin
     {
         public FileType FileType { get; set; } = FileType.Archive;
 
-        public bool CanSave { get; set; } = false;
+        public bool CanSave { get; set; } = true;
         public string[] Description { get; set; } = new string[] { "de Blob 2 Archive" };
         public string[] Extension { get; set; } = new string[] { "*.trb" };
         public string FileName { get; set; }
@@ -37,7 +39,7 @@ namespace FirstPlugin
             }
         }
 
-        public bool CanAddFiles { get; set; } = true;
+        public bool CanAddFiles { get; set; } = false;
 
         public bool CanRenameFiles { get; set; } = true;
 
@@ -49,6 +51,12 @@ namespace FirstPlugin
         public IEnumerable<ArchiveFileInfo> Files => files;
         public bool DisplayIcons => throw new NotImplementedException();
 
+        TRB.Header header = new TRB.Header();
+
+        DataInfo[] saveData;
+
+        TagInfo[] saveTag;
+
         public void Load(System.IO.Stream stream)
         {
             using (var reader = new FileReader(stream))
@@ -56,7 +64,6 @@ namespace FirstPlugin
                 // Read header for data locations
                 files.Clear();
                 reader.ByteOrder = ByteOrder.LittleEndian;
-                TRB.Header header = new TRB.Header();
                 header.version = reader.ReadUInt32(4);
                 reader.Position += 4;
                 header.flag1 = reader.ReadUInt16();
@@ -91,6 +98,7 @@ namespace FirstPlugin
                         zero4 = reader.ReadUInt32()
                     };
                 }
+                saveData = dataInfos;
                 
                 for (int i = 0; i < header.tagCount; i++)
                 {
@@ -100,9 +108,11 @@ namespace FirstPlugin
                         magic = System.Text.Encoding.ASCII.GetString(reader.ReadBytes(4)),
                         dataOffset = reader.ReadInt32(),
                         flag = reader.ReadUInt32(),
-                        textOffset = reader.ReadInt32()
+                        textOffset = reader.ReadInt32(),
+                        name = "default"
                     };
                 }
+                
 
                 // Get extra data, currently unused
                 if (header.dataInfoCount > 2)
@@ -122,6 +132,8 @@ namespace FirstPlugin
                     isPtex = false;
                     reader.Position = dataInfos[0].dataOffset + tagInfos[i].textOffset;
                     string filename = reader.ReadZeroTerminatedString();
+                    tagInfos[i].name = filename;
+                    saveTag = tagInfos;
                     if (!tagInfos[i].magic.StartsWith("\0")) filename = filename + "." + tagInfos[i].magic.ToLower();
                     reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset;
                     FileEntry file = new FileEntry()
@@ -131,7 +143,6 @@ namespace FirstPlugin
                     };
                     if (tagInfos[i].magic == "PTEX")
                     {
-                        isPtex = true;
                         reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset + 88;
                         Ptex ptex = new Ptex()
                         {
@@ -147,7 +158,7 @@ namespace FirstPlugin
                         {
                             WiiUSwizzle = false,
                             FileType = FileType.Image,
-                            Text = filename
+                            Text = filename + ".dds"
                         };
                         reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
                         reader.Position += ptex.ddsOffset;
@@ -155,11 +166,13 @@ namespace FirstPlugin
                         FileType = FileType.Image;
                         //file.FileData = reader.ReadBytes(ptex.ddsSize);
                     }
-                    if (!isPtex) files.Add(file);
+                    files.Add(file);
                 }
                 TagInfo lastTag = tagInfos[header.tagCount - 1];
                 reader.Position = dataInfos[0].dataOffset + lastTag.textOffset;
                 string filename2 = reader.ReadZeroTerminatedString();
+                tagInfos[header.tagCount - 1].name = filename2;
+                saveTag = tagInfos;
                 if (!lastTag.magic.StartsWith("\0")) filename2 = filename2 + "." + lastTag.magic.ToLower();
                 reader.Position = dataInfos[1].dataOffset + lastTag.dataOffset;
                 FileEntry file2 = new FileEntry()
@@ -169,7 +182,6 @@ namespace FirstPlugin
                 };
                 if (tagInfos[header.tagCount - 1].magic == "PTEX")
                 {
-                    isPtex = true;
                     reader.Position = dataInfos[1].dataOffset + tagInfos[header.tagCount - 1].dataOffset + 88;
                     Ptex ptex = new Ptex()
                     {
@@ -185,13 +197,13 @@ namespace FirstPlugin
                     {
                         WiiUSwizzle = false,
                         FileType = FileType.Image,
-                        Text = filename2
+                        Text = filename2 + ".dds"
                     };
                     reader.Position = dataInfos[header.dataInfoCount - 1].dataOffset;
                     reader.Position += ptex.ddsOffset;
                     Nodes.Add(dds);
                     FileType = FileType.Image;
-                    if (!isPtex) files.Add(file2);
+                    files.Add(file2);
                 }
             }
         }
@@ -221,7 +233,55 @@ namespace FirstPlugin
 
         public void Save(Stream stream)
         {
-            throw new NotImplementedException();
+            
+            using (var writer = new FileWriter(stream))
+            {
+                writer.ByteOrder = Syroot.BinaryData.ByteOrder.LittleEndian;
+                writer.WriteString("TRB", System.Text.Encoding.ASCII);
+                writer.Write(header.version);
+                writer.Write(header.flag1);
+                writer.Write(header.flag2);
+                writer.Write(header.dataInfoCount);
+                writer.Write(header.dataInfoSize);
+                writer.Write(header.tagCount);
+                writer.Write(header.tagSize);
+                writer.Write(header.relocationDataOffset);
+                writer.Write(header.relocationDataSize);
+                writer.Position += 92;
+                for (var i = 0; i < header.dataInfoCount; i++)
+                {
+                    writer.Write(saveData[i].unknown1);
+                    writer.Write(saveData[i].textOffset);
+                    writer.Write(saveData[i].unknown2);
+                    writer.Write(saveData[i].unknown3);
+                    writer.Write(saveData[i].dataSize);
+                    writer.Write(saveData[i].dataSize2);
+                    writer.Write(saveData[i].dataOffset);
+                    writer.Write(saveData[i].unknown4);
+                    writer.Write(saveData[i].zero1);
+                    writer.Write(saveData[i].zero2);
+                    writer.Write(saveData[i].zero3);
+                    writer.Write(saveData[i].zero4);
+                }
+                for (var i = 0; i < header.tagCount; i++)
+                {
+                    writer.WriteNullTerminatedStringUtf8(saveTag[i].magic);
+                    writer.Write(saveTag[i].dataOffset);
+                    writer.Write(saveTag[i].flag);
+                    writer.Write(saveTag[i].textOffset);
+                }
+                writer.Position = saveData[0].dataOffset;
+                writer.WriteNullTerminatedStringUtf8(".text");
+                writer.Position += 1;
+                writer.WriteNullTerminatedStringUtf8(".data");
+                writer.Position += 1;
+                for (var i = 0; i < header.tagCount; i++)
+                {
+                    writer.Position = saveTag[i].textOffset + saveData[0].dataOffset;
+                    writer.WriteNullTerminatedStringUtf8(saveTag[i].name);
+                }
+                writer.Position = saveData[1].dataOffset; 
+            }
         }
         
         public class FileEntry : ArchiveFileInfo
@@ -229,7 +289,7 @@ namespace FirstPlugin
 
         }
 
-        class Header
+        public class Header
         {
             public string magic = "TRB";
             public uint version;
@@ -264,6 +324,7 @@ namespace FirstPlugin
             public int dataOffset;
             public uint flag;
             public int textOffset;
+            public string name;
         }
 
         public class Ptex

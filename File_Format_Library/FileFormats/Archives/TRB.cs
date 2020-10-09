@@ -8,6 +8,7 @@ using Syroot.BinaryData;
 using Toolbox.Library.IO;
 using System.Security.Cryptography.X509Certificates;
 using SPICA.Formats.Common;
+using System.Linq;
 
 namespace FirstPlugin
 {
@@ -203,8 +204,8 @@ namespace FirstPlugin
                     reader.Position += ptex.ddsOffset;
                     Nodes.Add(dds);
                     FileType = FileType.Image;
-                    files.Add(file2);
                 }
+                files.Add(file2);
             }
         }
         public void Unload() //This is used when the file format is disposed of
@@ -281,6 +282,13 @@ namespace FirstPlugin
                     writer.WriteNullTerminatedStringUtf8(saveTag[i].name);
                 }
                 writer.Position = saveData[1].dataOffset; 
+                
+                for (var i = 0; i < header.tagCount; i++)
+                {
+                    writer.Position = saveData[1].dataOffset + saveTag[i].dataOffset;
+                    writer.Write(files[i].FileData);
+                }
+
             }
         }
         

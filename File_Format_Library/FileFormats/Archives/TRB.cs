@@ -71,6 +71,8 @@ namespace FirstPlugin
 
         long fileSize;
 
+        ByteOrder byteOrder = ByteOrder.LittleEndian;
+
         public void Load(System.IO.Stream stream)
         {
             fileSize = stream.Length;
@@ -81,7 +83,14 @@ namespace FirstPlugin
                 ddsList.Clear();
                 // Read header for data locations
                 files.Clear();
-                reader.ByteOrder = ByteOrder.LittleEndian;
+                reader.Position = 4;
+                reader.ByteOrder = byteOrder;
+                if (reader.ReadUInt32() != 2001)
+                {
+                    byteOrder = ByteOrder.BigEndian;
+                }
+                reader.ByteOrder = byteOrder;
+                reader.Position = 0;
                 header.version = reader.ReadUInt32(4);
                 reader.Position += 4;
                 header.flag1 = reader.ReadUInt16();
@@ -264,7 +273,7 @@ namespace FirstPlugin
             
             using (var writer = new FileWriter(stream))
             {
-                writer.ByteOrder = Syroot.BinaryData.ByteOrder.LittleEndian;
+                writer.ByteOrder = byteOrder;
                 writer.WriteString("TRB", System.Text.Encoding.ASCII);
                 writer.Write(header.version);
                 writer.Write(header.flag1);

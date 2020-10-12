@@ -5,7 +5,7 @@ using Toolbox.Library;
 using Syroot.BinaryData;
 using Toolbox.Library.IO;
 using SPICA.Formats.Common;
-using Syroot.Maths;
+using Toolbox.Library.Rendering;
 
 namespace FirstPlugin
 {
@@ -55,6 +55,8 @@ namespace FirstPlugin
         public List<Pmdl> pmdlList = new List<Pmdl>();
 
         public int ptexCount { get; set; }
+
+        public int pmdlCount { get; set; }
         public bool DisplayIcons => throw new NotImplementedException();
 
         TRB.Header header = new TRB.Header();
@@ -71,11 +73,13 @@ namespace FirstPlugin
 
         ByteOrder byteOrder = ByteOrder.LittleEndian;
 
+
         public void Load(System.IO.Stream stream)
         {
             fileSize = stream.Length;
             using (var reader = new FileReader(stream))
             {
+                pmdlCount = 0;
                 ptexCount = 0;
                 ptexList.Clear();
                 ddsList.Clear();
@@ -219,6 +223,71 @@ namespace FirstPlugin
                         reader.Position = pmdl.offsetToSubInfosStart + dataInfos[1].dataOffset;
                         int[] subInfoStarts = new int[pmdl.subInfoCount];
                         subInfoStarts = reader.ReadInt32s(pmdl.subInfoCount);
+                        SubInfoData[] subInfoDatas = new SubInfoData[pmdl.subInfoCount];
+                        for (int t = 0; t < pmdl.subInfoCount; t++)
+                        {
+                            reader.Position = subInfoStarts[t] + dataInfos[1].dataOffset;
+                            SubInfoData subInfoData = new SubInfoData()
+                            {
+                                unknown1 = reader.ReadInt32(),
+                                unknown2 = reader.ReadInt32(),
+                                unknown3 = reader.ReadInt32(),
+                                unknown4 = reader.ReadInt32(),
+                                unknown5 = reader.ReadInt32(),
+                                unknown6 = reader.ReadInt32(),
+                                vertexCount = reader.ReadInt32(),
+                                unknown8 = reader.ReadInt32(),
+                                previousFaceCount = reader.ReadInt32(),
+                                faceCount = reader.ReadInt32(),
+                                unknown11 = reader.ReadInt32(),
+                                unknown12 = reader.ReadInt32(),
+                                vertexOffsetRelative = reader.ReadInt32(),
+                                normalUVOffset = reader.ReadInt32(),
+                                faceOffset = reader.ReadInt32(),
+                                sameSizeorOffset = reader.ReadInt32(),
+                                sameSizeorOffset2 = reader.ReadInt32(),
+                                sameSizeorOffset3 = reader.ReadInt32(),
+                                sameSizeorOffset4 = reader.ReadInt32(),
+                                sameSizeorOffset5 = reader.ReadInt32()
+                            };
+
+                            pmdl.verticesCount = subInfoData.vertexCount;
+                            pmdl.facesCount = subInfoData.faceCount;
+                            subInfoDatas[t] = subInfoData;
+                        }
+                        var renderedMesh = new GenericRenderedObject();
+                        var renderer = new GenericModelRenderer();
+                        renderedMesh.ImageKey = "mesh";
+                        renderedMesh.SelectedImageKey = "mesh";
+                        renderedMesh.Checked = true;
+                        int[] normalUVSize = new int[pmdl.subInfoCount];
+                        if (pmdl.subInfoCount > 1)
+                        {
+                            int remember = 0;
+                            for (int a = 0; a + 1 < pmdl.subInfoCount; a++)
+                            {
+                                pmdl.normalUVStart = subInfoDatas[a].normalUVOffset;
+                                pmdl.normalUVEnd = subInfoDatas[a + 1].normalUVOffset;
+                                normalUVSize[a] = (int)(pmdl.normalUVEnd - pmdl.normalUVStart);
+                                remember = a;
+                            }
+                            pmdl.normalUVStart = subInfoDatas[remember + 1].normalUVOffset;
+                            pmdl.normalUVEnd = subInfoDatas[remember + 1].normalUVOffset;
+                        }
+                        else if (pmdl.subInfoCount >= 1)
+                        {
+                            for (int x = 0; x < pmdl.subInfoCount; x++)
+                            {
+                                int stride = (int)(normalUVSize[x] / subInfoDatas[x].vertexCount);
+                                reader.Position = pmdl.vertexStartOffset + subInfoDatas[x].vertexOffsetRelative;
+                                for (int j = 0; j < subInfoDatas[x].vertexCount; j++)
+                                {
+                                    Vertex vert = new Vertex();
+                                    vert.pos = new OpenTK.Vector3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+                                }
+                                
+                            }
+                        }
                     }
                     files.Add(file);
                 }
@@ -475,9 +544,13 @@ namespace FirstPlugin
 
         public class Pmdl
         {
-            public Vector3F vertices;
-            public Vector3F normals;
-            public Vector3F uvs;
+            public float vertices;
+            public float normals;
+            public float uvs;
+            public long verticesCount;
+            public long facesCount;
+            public long normalUVStart;
+            public long normalUVEnd;
             public ulong faces;
             public short relocationDataCount;
             public short pmdlSize;
@@ -490,6 +563,30 @@ namespace FirstPlugin
             public int subInfoCount;
             public long offsetToSubInfosStart;
             public long endOfSubInfos;
+        }
+
+        public class SubInfoData
+        {
+            public long unknown1;
+            public long unknown2;
+            public long unknown3;
+            public long unknown4;
+            public long unknown5;
+            public long unknown6;
+            public long vertexCount;
+            public long unknown8;
+            public long previousFaceCount;
+            public long faceCount;
+            public long unknown11;
+            public long unknown12;
+            public long vertexOffsetRelative;
+            public long normalUVOffset;
+            public long faceOffset;
+            public long sameSizeorOffset;
+            public long sameSizeorOffset2;
+            public long sameSizeorOffset3;
+            public long sameSizeorOffset4;
+            public long sameSizeorOffset5;
         }
     }
 }

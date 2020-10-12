@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows.Forms;
 using Toolbox.Library;
-using Toolbox.Library.Forms;
 using Syroot.BinaryData;
 using Toolbox.Library.IO;
-using System.Security.Cryptography.X509Certificates;
 using SPICA.Formats.Common;
-using System.Linq;
-using SFGraphics.GLObjects.Shaders.ShaderEventArgs;
+using Syroot.Maths;
 
 namespace FirstPlugin
 {
@@ -56,6 +52,8 @@ namespace FirstPlugin
 
         public List<DDS> ddsList = new List<DDS>();
 
+        public List<Pmdl> pmdlList = new List<Pmdl>();
+
         public int ptexCount { get; set; }
         public bool DisplayIcons => throw new NotImplementedException();
 
@@ -85,10 +83,7 @@ namespace FirstPlugin
                 files.Clear();
                 reader.Position = 4;
                 reader.ByteOrder = byteOrder;
-                if (reader.ReadUInt32() != 2001)
-                {
-                    byteOrder = ByteOrder.BigEndian;
-                }
+                if (reader.ReadUInt32() != 2001) byteOrder = ByteOrder.BigEndian;
                 reader.ByteOrder = byteOrder;
                 reader.Position = 0;
                 header.version = reader.ReadUInt32(4);
@@ -166,9 +161,12 @@ namespace FirstPlugin
                         FileName = filename,
                         FileData = reader.ReadBytes(tagInfos[i + 1].dataOffset - tagInfos[i].dataOffset)
                     };
+                    reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset;
+
+                    // Load textures as a dds using the PTEX pointer
                     if (tagInfos[i].magic == "PTEX")
                     {
-                        reader.Position = dataInfos[1].dataOffset + tagInfos[i].dataOffset + 88;
+                        reader.Position += 88;
                         Ptex ptex = new Ptex()
                         {
                             ptexOffset = reader.Position,
@@ -195,10 +193,37 @@ namespace FirstPlugin
                         ddsList.Add(dds);
                         FileType = FileType.Image;
                         ptexCount++;
-                        //file.FileData = reader.ReadBytes(ptex.ddsSize);
+                    }
+
+                    if (tagInfos[i].magic == "PMDL")
+                    {
+                        reader.Position += 8;
+                        Pmdl pmdl = new Pmdl()
+                        {
+                            relocationDataCount = reader.ReadInt16(),
+                            pmdlSize = reader.ReadInt16()
+                        };
+                        reader.Position += 4;
+                        pmdl.modelTextOffset = reader.ReadInt32();
+                        reader.Position += 36;
+                        pmdl.sumVertCount = reader.ReadInt32();
+                        pmdl.faceStartOffsetRelative = reader.ReadInt32();
+                        pmdl.vertexStartOffset = reader.ReadInt32();
+                        reader.Position += 4;
+                        pmdl.sumFaceCount = reader.ReadInt32();
+                        pmdl.faceStartOffset = reader.ReadInt32();
+                        reader.Position += 48;
+                        pmdl.subInfoCount = reader.ReadInt32();
+                        pmdl.offsetToSubInfosStart = reader.ReadInt32();
+                        pmdl.endOfSubInfos = reader.ReadInt32();
+                        reader.Position = pmdl.offsetToSubInfosStart + dataInfos[1].dataOffset;
+                        int[] subInfoStarts = new int[pmdl.subInfoCount];
+                        subInfoStarts = reader.ReadInt32s(pmdl.subInfoCount);
                     }
                     files.Add(file);
                 }
+
+                // For the last file, read until the end of the raw data section
                 TagInfo lastTag = tagInfos[header.tagCount - 1];
                 reader.Position = dataInfos[0].dataOffset + lastTag.textOffset;
                 string filename2 = reader.ReadZeroTerminatedString();
@@ -346,10 +371,12 @@ namespace FirstPlugin
                     writer.Write(new byte());
                 }
 
+                // Save textures
                 if (ptexCount != 0)
                 {
                     for (var i = 0; i < ptexCount; i++)
                     {
+                        // I couldn't figure out how to directly write a complete dds with one line - either I'm dumb or the dds code is dumb
                         ddsList[i].IsDX10 = false;
                         writer.Position = ptexList[i].ddsOffset + saveData[header.dataInfoCount - 1].dataOffset;
                         writer.WriteString("DDS ", System.Text.Encoding.ASCII);
@@ -446,5 +473,23 @@ namespace FirstPlugin
             public long ptexOffset;
         }
 
+        public class Pmdl
+        {
+            public Vector3F vertices;
+            public Vector3F normals;
+            public Vector3F uvs;
+            public ulong faces;
+            public short relocationDataCount;
+            public short pmdlSize;
+            public long modelTextOffset;
+            public long sumVertCount;
+            public long faceStartOffsetRelative;
+            public long vertexStartOffset;
+            public long sumFaceCount;
+            public long faceStartOffset;
+            public int subInfoCount;
+            public long offsetToSubInfosStart;
+            public long endOfSubInfos;
+        }
     }
 }

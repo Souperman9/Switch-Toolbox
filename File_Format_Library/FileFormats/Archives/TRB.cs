@@ -125,7 +125,7 @@ namespace FirstPlugin
                     };
                 }
                 saveData = dataInfos;
-                
+
                 for (int i = 0; i < header.tagCount; i++)
                 {
                     // Get tags for file extensions, data, and names
@@ -138,7 +138,7 @@ namespace FirstPlugin
                         name = "default"
                     };
                 }
-                
+
 
                 // Get extra data, currently unused except for saving the file
                 if (header.dataInfoCount > 2)
@@ -285,7 +285,7 @@ namespace FirstPlugin
                                     Vertex vert = new Vertex();
                                     vert.pos = new OpenTK.Vector3(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
                                 }
-                                
+
                             }
                         }
                     }
@@ -335,6 +335,45 @@ namespace FirstPlugin
                     FileType = FileType.Image;
                     ptexCount++;
                 }
+                if (tagInfos[0].magic == "enti")
+                {
+                    reader.Position = dataInfos[1].dataOffset + tagInfos[0].dataOffset;
+                    var position = reader.Position;
+                    var entityHeader = new Entity.EntityHeader()
+                    {
+                        entitiesOffset = reader.ReadUInt32(),
+                        entitiesCount = reader.ReadUInt32(),
+                        unknown1 = reader.ReadUInt32(),
+                        unknown2 = reader.ReadUInt32()
+                    };
+                    reader.Position = position + entityHeader.entitiesOffset;
+                    var properties = new Entity.Property[entityHeader.entitiesCount];
+                    //var entities = new Entity.Entity[entityHeader.entitiesCount];
+                    //for (int i = 0; i < entityHeader.entitiesCount; i++)
+                    //{
+                    //    entities[i].entityNameOffset = reader.ReadUInt32();
+                    //    entities[i].propertiesCount = reader.ReadUInt16();
+                    //    entities[i].propertiesCount2 = reader.ReadUInt16();
+                    //    entities[i].propertiesOffset = reader.ReadUInt32();
+                    //    entities[i].matrixOffset = reader.ReadUInt32();
+                    //    entities[i].positionOffset = reader.ReadUInt32();
+                    //    entities[i].unknown = reader.ReadUInt32();
+                    //    entities[i].flag = reader.ReadUInt32();
+                    //    entities[i].valuesOffset = reader.ReadUInt32();
+                    //}
+
+                    var entities = new Entity.Entity[entityHeader.entitiesCount];
+ 
+
+                    for (int i = 0; i < entityHeader.entitiesCount; i++)
+                    {
+                        reader.Position = position + entities[i].propertiesOffset;
+                    }
+
+
+
+                }
+
                 files.Add(file2);
             }
         }
@@ -364,7 +403,7 @@ namespace FirstPlugin
 
         public void Save(Stream stream)
         {
-            
+
             using (var writer = new FileWriter(stream))
             {
                 writer.ByteOrder = byteOrder;
@@ -413,14 +452,13 @@ namespace FirstPlugin
                 writer.WriteNullTerminatedStringUtf8(".data");
                 writer.Position += 1;
 
-
                 for (var i = 0; i < header.tagCount; i++)
                 {
                     writer.Position = saveTag[i].textOffset + saveData[0].dataOffset;
                     writer.WriteNullTerminatedStringUtf8(saveTag[i].name);
                 }
-                writer.Position = saveData[1].dataOffset; 
-                
+                writer.Position = saveData[1].dataOffset;
+
                 for (var i = 0; i < header.tagCount; i++)
                 {
                     writer.Position = saveData[1].dataOffset + saveTag[i].dataOffset;
@@ -488,7 +526,7 @@ namespace FirstPlugin
                 }
             }
         }
-        
+
         public class FileEntry : ArchiveFileInfo
         {
 
@@ -587,6 +625,76 @@ namespace FirstPlugin
             public long sameSizeorOffset3;
             public long sameSizeorOffset4;
             public long sameSizeorOffset5;
+        }
+    }
+
+    namespace Entity
+    {
+        public enum VariableType
+        {
+            ENUM = 0,
+            INT = 1,
+            FLOAT = 2,
+            BOOL = 3,
+            TEXTOFFSET = 4,
+            VECTOR4 = 5,
+            Unknown = 6,
+            Unknown2 = 7,
+            Unknown3 = 8,
+            OFFSET = 9
+        };
+
+        public class EntityHeader
+        {
+            public uint entitiesOffset;
+            public uint entitiesCount;
+            public uint unknown1;
+            public uint unknown2;
+        }
+
+        public class Entity
+        {
+            public uint entityNameOffset;
+            public ushort propertiesCount;
+            public ushort propertiesCount2;
+            public uint propertiesOffset;
+            public uint matrixOffset;
+            public uint positionOffset;
+            public uint unknown;
+            public uint flag;
+            public uint valuesOffset;
+            public Property[] properties;
+
+            public Entity(
+                uint entityNameOffset,
+                ushort propertiesCount,
+                ushort propertiesCount2,
+                uint propertiesOffset,
+                uint matrixOffset,
+                uint positionOffset,
+                uint unknown,
+                uint flag,
+                uint valuesOffset,
+                Property[] properties
+            )
+            {
+                this.entityNameOffset = entityNameOffset;
+                this.propertiesCount = propertiesCount;
+                this.propertiesCount2 = propertiesCount2;
+                this.propertiesOffset = propertiesOffset;
+                this.matrixOffset = matrixOffset;
+                this.positionOffset = positionOffset;
+                this.unknown = unknown;
+                this.flag = flag;
+                this.valuesOffset = valuesOffset;
+                this.properties = properties;
+            }
+        }
+        public class Property
+        {
+            public uint propertyNameOffset;
+            VariableType type;
+            public object value;
         }
     }
 }

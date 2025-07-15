@@ -476,7 +476,7 @@
         </member>
         <member name="P:KclLibrary.KCLModel.PrismThickness">
             <summary>
-            Gets or sets the thickness of the Prisms.
+            Gets or sets the thickness of the prisms.
             </summary>
         </member>
         <member name="P:KclLibrary.KCLModel.PolygonOctreeRoots">
@@ -513,6 +513,11 @@
         <member name="M:KclLibrary.KCLModel.GetMaxTriangleCount">
             <summary>
             Gets the maximum triangle count used by an octree.
+            </summary>
+        </member>
+        <member name="M:KclLibrary.KCLModel.GetMaxCubeSize">
+            <summary>
+            Gets the largest cube size used for the octrees.
             </summary>
         </member>
         <member name="M:KclLibrary.KCLModel.GetMinCubeSize">

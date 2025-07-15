@@ -1,67 +1,146 @@
-﻿using System;
+using Syroot.BinaryData;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Toolbox.Library;
 using Toolbox.Library.IO;
-using Toolbox.Library.Forms;
-using System.Windows.Forms;
 
-namespace FirstPlugin
-{
-    class NARC : IArchiveFile, IFileFormat
-    {
+namespace FirstPlugin {
+    class NARC : IArchiveFile, IFileFormat {
         public FileType FileType { get; set; } = FileType.Archive;
 
-        public bool CanSave { get; set; }
+        public bool CanSave { get; set; } = true;
         public string[] Description { get; set; } = new string[] { "Nitro Archive (NARC)" };
         public string[] Extension { get; set; } = new string[] { "*.narc" };
         public string FileName { get; set; }
         public string FilePath { get; set; }
         public IFileInfo IFileInfo { get; set; }
 
-        public bool Identify(System.IO.Stream stream)
-        {
-            using (var reader = new Toolbox.Library.IO.FileReader(stream, true))
-            {
-                return reader.CheckSignature(4, "NARC");
-            }
-        }
+        public Type[] Types => new Type[0];
 
-        public Type[] Types
-        {
-            get
-            {
-                List<Type> types = new List<Type>();
-                return types.ToArray();
-            }
-        }
+        public bool CanAddFiles { get; set; } = true;
+        public bool CanRenameFiles { get; set; } = true;
+        public bool CanReplaceFiles { get; set; } = true;
+        public bool CanDeleteFiles { get; set; } = true;
 
-        public bool CanAddFiles { get; set; }
-        public bool CanRenameFiles { get; set; }
-        public bool CanReplaceFiles { get; set; }
-        public bool CanDeleteFiles { get; set; }
-
-        public List<FileEntry> files = new List<FileEntry>();
         public IEnumerable<ArchiveFileInfo> Files => files;
 
-        public void ClearFiles() { files.Clear(); }
+        // private
+        private Header header;
+        private byte[] bfntUnk = new byte[] { 0x00, 0x00, 0x01, 0x00 };
 
-        public bool AddFile(ArchiveFileInfo archiveFileInfo)
-        {
-            return false;
+        private List<FileEntry> files = new List<FileEntry>();
+
+        public bool AddFile(ArchiveFileInfo archiveFileInfo) {
+            files.Add(new FileEntry(this)
+            {
+                FileData = archiveFileInfo.FileData,
+                FileName = archiveFileInfo.FileName,
+            });
+            return true;
         }
 
-        public bool DeleteFile(ArchiveFileInfo archiveFileInfo)
-        {
-            return false;
+        public void ClearFiles() => files.Clear();
+
+        public bool DeleteFile(ArchiveFileInfo archiveFileInfo) {
+            return files.Remove((FileEntry)archiveFileInfo);
+        }
+
+        public bool Identify(Stream stream) {
+            using(FileReader reader = new FileReader(stream, true))
+                return reader.CheckSignature(4, "NARC");
+        }
+
+        public void Load(Stream stream) {
+            using(FileReader reader = new FileReader(stream)) {
+                //DirectoryEntry currentDirEntry = rootDir;
+                string currentDir = string.Empty;
+
+                header = new Header(reader);
+
+                reader.ReadSignature(4, "BTAF");
+
+                // The positions where the sections' reading was left last time.
+                long bfatIndex = reader.Position + 8;
+                long bfntIndex = reader.Position + reader.ReadUInt32(); // From the BFAT length.
+                long fimgIndex;
+
+                uint fileCount = reader.ReadUInt32();
+
+                uint currentFileOffset;
+                uint currentFileEnd;
+
+                reader.Position = bfntIndex;
+
+                fimgIndex = reader.Position + reader.ReadUInt32() + 4; // Sets FIMG section begining.
+                bfntUnk = reader.ReadBytes(reader.ReadInt32() - 4);
+
+                for(int i = 0; i < fileCount; i++) {
+                    byte nameLength = reader.ReadByte();
+
+                    if(nameLength == 0x00) { // End of the "folder".
+                        List<int> slashIndices = new List<int>();
+                        for(int j = 0; j < currentDir.Length; j++)
+                            if(currentDir[j] == '/')
+                                slashIndices.Add(j);
+
+                        int lastSlash = slashIndices.Last();
+                        slashIndices.Remove(lastSlash);
+                        int slashBeforeLast = slashIndices.Count > 0 ? slashIndices.Last() : 0;
+
+                        currentDir = currentDir.Remove(slashBeforeLast + 1);
+
+                        if(currentDir.Length == 1)
+                            currentDir = string.Empty;
+
+                        i--;
+                        continue;
+                    }
+
+                    if(nameLength >= 0x80) { // If it is a "folder".
+                        // Disable file modifications:
+                        CanSave = false;
+                        CanAddFiles = false;
+                        CanRenameFiles = false;
+                        CanReplaceFiles = false;
+                        CanDeleteFiles = false;
+
+                        string dirName = reader.ReadString(nameLength & 0x7F);
+                        currentDir += dirName + "/";
+
+                        reader.Position += 2;
+                        i--;
+                        continue;
+                    }
+
+                    // Read BFAT section:
+                    using(reader.TemporarySeek()) {
+                        reader.Position = bfatIndex;
+
+                        currentFileOffset = reader.ReadUInt32();
+                        currentFileEnd = reader.ReadUInt32();
+
+                        bfatIndex = reader.Position;
+                    }
+
+                    string name = reader.ReadString(nameLength);
+
+                    using(reader.TemporarySeek()) {
+                        reader.Position = fimgIndex + currentFileOffset;
+                        files.Add(new FileEntry(this) {
+                            FileName = currentDir + name,
+                            BlockData = reader.ReadBytes((int) (currentFileEnd - currentFileOffset))
+                    });
+                    }
+                }
+            }
         }
 
         public class FileEntry : ArchiveFileInfo
         {
-            public NARC.FileAllocationEntry entry;
-            public FileImageBlock fileImage;
+            public byte[] BlockData;
 
             public override Dictionary<string, string> ExtensionImageKeyLookup
             {
@@ -79,10 +158,9 @@ namespace FirstPlugin
 
             public NARC ArchiveFile;
 
-            public FileEntry(NARC narc, string Name)
+            public FileEntry(NARC narc)
             {
                 ArchiveFile = narc;
-                FileName = Name.Replace(" ", string.Empty).RemoveIllegaleFolderNameCharacters();
             }
 
             public override byte[] FileData
@@ -90,7 +168,7 @@ namespace FirstPlugin
                 get { return DecompressBlock(); }
                 set
                 {
-
+                    BlockData = value;
                 }
             }
 
@@ -117,7 +195,7 @@ namespace FirstPlugin
 
             private byte[] DecompressBlock()
             {
-                byte[] data = GetBlock();
+                byte[] data = BlockData;
 
                 var reader = new FileReader(data);
                 reader.ByteOrder = Syroot.BinaryData.ByteOrder.BigEndian;
@@ -155,72 +233,18 @@ namespace FirstPlugin
 
                 return data;
             }
-
-            public byte[] GetBlock()
-            {
-                return Utils.SubArray(fileImage.dataBlock, entry.StartOffset, entry.EndOffset);
-            }
         }
 
-        Header header;
+        public void Unload() { }
 
-        public List<FileEntry> FileEntries = new List<FileEntry>();
-
-        public void Load(System.IO.Stream stream)
-        {
-            header = new Header(new FileReader(stream));
-            var names = GetNames(header.FNTB);
-
-            List<byte> Data = new List<byte>();
-            for (ushort i = 0; i < header.FATB.FileCount; i++)
-            {
-                string name = names.Count > i ? names[i] : $"File{i}";
-
-                FileEntries.Add(new FileEntry(this, name)
-                {
-                    entry = header.FATB.FileEntries[i],
-                    fileImage = header.FIMG,
-                });
-                files.Add(FileEntries[i]);
-            }
-        }
-
-        public List<string> GetNames(FileNameTable nameTable)
-        {
-            var names = new List<string>();
-            foreach (var tblEntry in nameTable.entryNameTable)
-            {
-                if (tblEntry is EntryNameTableFileEntry)
-                    names.Add(((EntryNameTableFileEntry)tblEntry).entryName);
-            }
-            return names;
-        }
-
-        public void Unload()
-        {
-
-        }
-        public void Save(System.IO.Stream stream)
-        {
-        }
-
-        //EFE for REing format https://github.com/Gericom/EveryFileExplorer/blob/f9f00d193c9608d71c9a23d9f3ab7e752f4ada2a/NDS/NitroSystem/FND/NARC.cs
-
-        public class Header
-        {
-            public string Signature;
+        internal class Header {
             public ushort ByteOrder;
+            public ushort Version;
             public uint FileSize;
-            public uint Version;
             public ushort HeaderSize;
             public ushort DataBlocks;
 
-            public FileAllocationTableBlock FATB;
-            public FileNameTable FNTB;
-            public FileImageBlock FIMG;
-
-            public Header(FileReader reader)
-            {
+            public Header(FileReader reader) {
                 reader.ByteOrder = Syroot.BinaryData.ByteOrder.LittleEndian;
                 reader.ReadSignature(4, "NARC");
 
@@ -231,198 +255,98 @@ namespace FirstPlugin
                 FileSize = reader.ReadUInt32();
                 HeaderSize = reader.ReadUInt16();
                 DataBlocks = reader.ReadUInt16();
-
-                FATB = new FileAllocationTableBlock(reader);
-                FNTB = new FileNameTable(reader);
-                FIMG = new FileImageBlock(reader);
-
-            }
-            public void Write(FileWriter writer)
-            {
-                writer.WriteSignature(Signature);
-                writer.Write(ByteOrder);
-                writer.Write(Version);
-                writer.Write(FileSize);
-                writer.Write(HeaderSize);
-                writer.Write(DataBlocks);
             }
         }
-        public class FileAllocationTableBlock
-        {
-            public string Signature;
-            public uint Size;
-            public ushort FileCount;
-            public ushort Reserved;
 
-            public List<FileAllocationEntry> FileEntries = new List<FileAllocationEntry>();
+        // Mostly everything from this point was imported from:
+        // https://github.com/Jenrikku/NARCSharp
+        public void Save(Stream stream) {
+            using(BinaryDataWriter writer = new BinaryDataWriter(stream)) {
+                #region Header
+                writer.Write("NARC", BinaryStringFormat.NoPrefixOrTermination, Encoding.ASCII); // Magic.
 
-            public FileAllocationTableBlock(FileReader reader)
-            {
-                long startPos = reader.Position;
+                writer.ByteOrder = (ByteOrder) header.ByteOrder;
+                writer.Write((ushort) 0xFFFE); // ByteOrder.
 
-                reader.ReadSignature(4, "BTAF");
+                writer.Write(header.Version); // Version.
 
-                Size = reader.ReadUInt32();
-                FileCount = reader.ReadUInt16();
-                Reserved = reader.ReadUInt16();
-                for (int i = 0; i < FileCount; i++)
-                    FileEntries.Add(new FileAllocationEntry(reader));
+                long headerLengthPorsition = writer.Position;
+                writer.Position += 4; // Skips length writing.
 
-                reader.Seek(startPos + Size, System.IO.SeekOrigin.Begin);
-            }
-        }
-        public class FileAllocationEntry
-        {
-            public uint StartOffset;
-            public uint EndOffset;
+                writer.Write(header.HeaderSize); // Header length.
+                writer.Write(header.DataBlocks); // Section count.
+                #endregion
 
-            public FileAllocationEntry(FileReader reader)
-            {
-                StartOffset = reader.ReadUInt32();
-                EndOffset = reader.ReadUInt32();
-            }
-            public void Write(FileWriter writer)
-            {
-                writer.Write(StartOffset);
-                writer.Write(EndOffset);
-            }
-        }
-        public class FileImageBlock
-        {
-            public string Signature;
-            public uint Size;
-            public byte[] dataBlock;
+                #region BTAF preparation
+                long btafPosition = WriteSectionHeader("BTAF"); // Header.
+                writer.Write((uint) files.Count); // File count.
 
-            public FileImageBlock(FileReader reader)
-            {
-                reader.ReadSignature(4, "GMIF");
+                for(uint i = 0; i < files.Count; i++) // Reads unset bytes per file. (Reserved space for later)
+                    writer.Position += 8;
 
-                Size = reader.ReadUInt32();
-                dataBlock = reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position));
-            }
-        }
-        public class FileNameTable
-        {
-            public string Signature;
-            public uint Size;
+                WriteSectionLength(btafPosition);
+                #endregion
 
-            public List<DirectoryTableEntry> directoryTable = new List<DirectoryTableEntry>();
-            public List<EntryNameTableEntry> entryNameTable = new List<EntryNameTableEntry>();
+                #region BTNF
+                long btnfPosition = WriteSectionHeader("BTNF"); // Header.
+                writer.Write(bfntUnk.Length + 4);
+                writer.Write(bfntUnk);
 
-            public FileNameTable(FileReader reader)
-            {
-                long startPos = reader.BaseStream.Position;
+                foreach(ArchiveFileInfo file in files)
+                    writer.Write(file.FileName, BinaryStringFormat.ByteLengthPrefix);
+                writer.Write((byte) 0x00);
 
-                reader.ReadSignature(4, "BTNF");
-                Size = reader.ReadUInt32();
-                if (Size == 16)
-                {
-                    reader.Seek(8);
-                    return;
+                writer.Align(128);
+
+                WriteSectionLength(btnfPosition);
+                #endregion
+
+                #region GMIF
+                long gmifPosition = WriteSectionHeader("GMIF"); // Header.
+
+                long btafCurrentPosition = btafPosition + 12; // First offset-size position. (BTAF)
+                foreach(ArchiveFileInfo file in files) {
+                    WriteBTAFEntry(); // BTAF offset
+                    writer.Write(file.FileData);
+                    WriteBTAFEntry(); // BTAF size.
+                    writer.Align(128);
                 }
 
-                directoryTable.Add(new DirectoryTableEntry(reader));
+                WriteSectionLength(gmifPosition);
+                #endregion
 
-                for (int i = 0; i < directoryTable[0].dirParentID - 1; i++)
-                {
-                    directoryTable.Add(new DirectoryTableEntry(reader));
+                writer.Position = headerLengthPorsition;
+                writer.Write((uint) writer.BaseStream.Length); // Total file length.
+
+                long WriteSectionHeader(string magic) {
+                    long startPosition = writer.Position;
+                    writer.Write(magic, BinaryStringFormat.NoPrefixOrTermination, Encoding.ASCII); // Magic.
+
+                    writer.Position += 4; // Skips length position.
+
+                    return startPosition;
                 }
-                entryNameTable = new List<EntryNameTableEntry>();
-                int EndOfDirectory = 0;
-                while (EndOfDirectory < directoryTable[0].dirParentID)
-                {
-                    byte entryNameLength = reader.ReadByte();
-                    reader.BaseStream.Position--;
-                    if (entryNameLength == 0)
-                    {
-                        entryNameTable.Add(new EntryNameTableEndOfDirectoryEntry(reader));
-                        EndOfDirectory++;
+
+                void WriteSectionLength(long startPosition) {
+                    using(writer.TemporarySeek()) {
+                        long finalLength = (uint) writer.Position;
+
+                        writer.Position = startPosition + 4;
+                        writer.Write((uint) (finalLength - startPosition));
                     }
-                    else if (entryNameLength < 0x80) entryNameTable.Add(new EntryNameTableFileEntry(reader));
-                    else entryNameTable.Add(new EntryNameTableDirectoryEntry(reader));
                 }
 
-                reader.BaseStream.Position = startPos + Size;
-            }
-        }
+                void WriteBTAFEntry() {
+                    uint value = (uint) (writer.Position - (gmifPosition + 8));
 
-        public class EntryNameTableEndOfDirectoryEntry : EntryNameTableEntry
-        {
-            public EntryNameTableEndOfDirectoryEntry() { }
-            public EntryNameTableEndOfDirectoryEntry(FileReader reader)
-                : base(reader) { }
-            public override void Write(FileWriter writer)
-            {
-                base.Write(writer);
-            }
-        }
+                    using(writer.TemporarySeek()) {
+                        writer.Position = btafCurrentPosition;
+                        writer.Write(value);
+                    }
 
-        public class EntryNameTableDirectoryEntry : EntryNameTableEntry
-        {
-            public string entryName;
-            public ushort directoryID;
-
-            public EntryNameTableDirectoryEntry(FileReader reader) : base(reader)
-            {
-                entryName = reader.ReadString(entryNameLength & 0x7F, Encoding.ASCII);
-                directoryID = reader.ReadUInt16();
-            }
-            public override void Write(FileWriter writer)
-            {
-                base.Write(writer);
-                writer.Write(entryName, Syroot.BinaryData.BinaryStringFormat.ZeroTerminated);
-                writer.Write(directoryID);
-            }
-        }
-
-        public class EntryNameTableFileEntry : EntryNameTableEntry
-        {
-            public string entryName;
-
-            public EntryNameTableFileEntry(FileReader reader) : base(reader)
-            {
-                entryName = reader.ReadString(entryNameLength, Encoding.ASCII);
-            }
-            public override void Write(FileWriter writer)
-            {
-                writer.Write(entryName, Syroot.BinaryData.BinaryStringFormat.ZeroTerminated);
-            }
-        }
-
-        public class EntryNameTableEntry
-        {
-            public byte entryNameLength;
-
-            protected EntryNameTableEntry() { }
-            public EntryNameTableEntry(FileReader reader)
-            {
-                entryNameLength = reader.ReadByte();
-            }
-            public virtual void Write(FileWriter writer)
-            {
-                writer.Write(entryNameLength);
-            }
-        }
-
-        public class DirectoryTableEntry
-        {
-            public uint dirEntryStart;
-            public ushort dirEntryFileID;
-            public ushort dirParentID;
-
-            public DirectoryTableEntry() { }
-            public DirectoryTableEntry(FileReader reader)
-            {
-                dirEntryStart = reader.ReadUInt32();
-                dirEntryFileID = reader.ReadUInt16();
-                dirParentID = reader.ReadUInt16();
-            }
-            public void Write(FileWriter writer)
-            {
-                writer.Write(dirEntryStart);
-                writer.Write(dirEntryFileID);
-                writer.Write(dirParentID);
-            }
+                    btafCurrentPosition += 4;
+                }
+            }            
         }
     }
 }

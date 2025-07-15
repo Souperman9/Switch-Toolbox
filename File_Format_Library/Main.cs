@@ -1,4 +1,4 @@
-﻿using PluginContracts;
+using PluginContracts;
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -334,6 +334,7 @@ namespace FirstPlugin
         private Type[] LoadCompressionFormats()
         {
             List<Type> Formats = new List<Type>();
+            Formats.Add(typeof(MeshCodecFormat));
             return Formats.ToArray();
         }
 
@@ -341,11 +342,16 @@ namespace FirstPlugin
         {
             List<Type> Formats = new List<Type>();
             Formats.Add(typeof(BFRES));
+            Formats.Add(typeof(MT_TEX));
+            Formats.Add(typeof(MT_Model));
+            Formats.Add(typeof(DKCTF.CModel));
+            Formats.Add(typeof(DKCTF.CTexture));
             Formats.Add(typeof(BCSV));
             Formats.Add(typeof(TVOL));
             Formats.Add(typeof(BTI));
             Formats.Add(typeof(TXE));
             Formats.Add(typeof(SARC));
+            Formats.Add(typeof(TRPAK));
             Formats.Add(typeof(BNTX));
             Formats.Add(typeof(BEA));
             Formats.Add(typeof(BYAML));
@@ -362,7 +368,6 @@ namespace FirstPlugin
             Formats.Add(typeof(PTCL));
             Formats.Add(typeof(EFF));
             Formats.Add(typeof(EFCF));
-            Formats.Add(typeof(NSP));
             Formats.Add(typeof(BNSH));
             Formats.Add(typeof(BFSHA));
             Formats.Add(typeof(BFSTM));
@@ -396,8 +401,6 @@ namespace FirstPlugin
             Formats.Add(typeof(GFBANMCFG));
             Formats.Add(typeof(Turbo.Course_MapCamera_bin));
             Formats.Add(typeof(SDF));
-            Formats.Add(typeof(IStorage));
-            Formats.Add(typeof(NCA));
             Formats.Add(typeof(RARC));
             Formats.Add(typeof(ME01));
             Formats.Add(typeof(LM3_DICT));
@@ -437,7 +440,6 @@ namespace FirstPlugin
             Formats.Add(typeof(BFLIM));
             Formats.Add(typeof(BCLIM));
             Formats.Add(typeof(DAT_Bayonetta));
-            Formats.Add(typeof(XCI));
             Formats.Add(typeof(VIBS));
             Formats.Add(typeof(NLG.StrikersRLT));
             Formats.Add(typeof(NLG.StrikersRLG));
@@ -452,7 +454,17 @@ namespace FirstPlugin
             Formats.Add(typeof(WTA));
             Formats.Add(typeof(BinGzArchive));
             Formats.Add(typeof(BNR));
+            Formats.Add(typeof(PKG));
             Formats.Add(typeof(TRB));
+            Formats.Add(typeof(MTXT));
+            Formats.Add(typeof(NKN));
+            Formats.Add(typeof(MetroidDreadLibrary.BSMAT));
+            Formats.Add(typeof(TRANM));
+            Formats.Add(typeof(GFA));
+            Formats.Add(typeof(TXTG));
+
+            //Formats.Add(typeof(XLINK_FILE));
+
             //  Formats.Add(typeof(MPBIN));
             //  Formats.Add(typeof(HSF));
             //   Formats.Add(typeof(ATB));
@@ -466,7 +478,6 @@ namespace FirstPlugin
             if (Runtime.DEVELOPER_DEBUG_MODE)
             {
                 Formats.Add(typeof(BFSAR));
-                Formats.Add(typeof(GFA));
             }
 
 

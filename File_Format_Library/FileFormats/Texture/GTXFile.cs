@@ -719,7 +719,7 @@ namespace FirstPlugin
             public override void Replace(string FileName)
             {
                 FTEX ftex = new FTEX();
-                ftex.ReplaceTexture(FileName, Format);
+                ftex.ReplaceTexture(FileName, Format, (uint)(surface.mipSize <= 1 ? 1 : 0));
                 if (ftex.texture != null)
                 {
                     surface.swizzle = ftex.texture.Swizzle;
@@ -744,8 +744,6 @@ namespace FirstPlugin
                     surface.imageCount = ftex.texture.MipCount;
                     surface.pitch = ftex.texture.Pitch;
                     surface.texRegs = GX2.CreateRegisters(surface);
-
-                    SetChannelComponents();
 
                     Format = FTEX.ConvertFromGx2Format((Syroot.NintenTools.Bfres.GX2.GX2SurfaceFormat)surface.format);
                     Width = surface.width;
@@ -777,7 +775,13 @@ namespace FirstPlugin
                 editor.Text = Text;
                 var tex = FTEX.FromGx2Surface(surface, Text);
                 tex.MipCount = MipCount;
-                editor.LoadProperties(tex);
+                editor.LoadProperties(tex, () =>
+                {
+                    surface.compSel[0] = (byte)tex.CompSelR;
+                    surface.compSel[1] = (byte)tex.CompSelG;
+                    surface.compSel[2] = (byte)tex.CompSelB;
+                    surface.compSel[3] = (byte)tex.CompSelA;
+                });
                 editor.LoadImage(this);
             }
         }

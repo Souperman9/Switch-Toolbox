@@ -307,7 +307,10 @@ namespace FirstPlugin
                         Matrix4 sb = model.Skeleton.bones[boneIndex].Transform;
                         v.pos = Vector3.TransformPosition(v.pos, sb);
                         v.nrm = Vector3.TransformNormal(v.nrm, sb);
+                        v.tan.Xyz = Vector3.TransformNormal(v.tan.Xyz, sb);
+                        v.bitan.Xyz = Vector3.TransformNormal(v.bitan.Xyz, sb);
                     }
+
                 }
                 if (fshp.VertexSkinCount == 0)
                 {
@@ -319,6 +322,8 @@ namespace FirstPlugin
                             Matrix4 NoBindFix = model.Skeleton.bones[boneIndex].Transform;
                             v.pos = Vector3.TransformPosition(v.pos, NoBindFix);
                             v.nrm = Vector3.TransformNormal(v.nrm, NoBindFix);
+                            v.tan.Xyz = Vector3.TransformNormal(v.tan.Xyz, NoBindFix);
+                            v.bitan.Xyz = Vector3.TransformNormal(v.bitan.Xyz, NoBindFix);
                         }
                     }
                     catch //Matrix failed. Print the coordinate data of the bone
@@ -357,6 +362,9 @@ namespace FirstPlugin
                 BfresBone STBone = new BfresBone(RenderableSkeleton);
                 ReadBone(STBone, bone);
                 RenderableSkeleton.bones.Add(STBone);
+
+                if (skeleton.FlagsScaling == SkeletonFlagsScaling.Maya)
+                    STBone.UseSegmentScaleCompensate = true;
             }
 
             skl.Nodes.Clear();
@@ -378,8 +386,6 @@ namespace FirstPlugin
             bone.RigidMatrixIndex = bn.RigidMatrixIndex;
             bone.SmoothMatrixIndex = bn.SmoothMatrixIndex;
             bone.BillboardIndex = bn.BillboardIndex;
-            bone.UseRigidMatrix = bn.RigidMatrixIndex != -1;
-            bone.UseSmoothMatrix = bn.SmoothMatrixIndex != -1;
             if (SetParent)
                 bone.parentIndex = bn.ParentIndex;
             if (bn.FlagsRotation == BoneFlagsRotation.Quaternion)
@@ -951,7 +957,6 @@ namespace FirstPlugin
                 fskl.node.SkeletonU = new Skeleton();
 
             fskl.node.SkeletonU.Bones.Clear();
-            fskl.node.SkeletonU.MatrixToBoneList = new List<ushort>();
             fskl.node.SkeletonU.InverseModelMatrices = new List<Syroot.Maths.Matrix3x4>();
 
             fskl.node.Nodes.Clear();
@@ -969,9 +974,6 @@ namespace FirstPlugin
                 if (bn.BoneU == null)
                     bn.BoneU = new Bone();
                 bn.GenericToBfresBone();
-
-                if (bn.SmoothMatrixIndex != short.MaxValue)
-                    fskl.node.SkeletonU.MatrixToBoneList.Add(SmoothIndex++);
 
                 //Check duplicated names
                 List<string> names = fskl.bones.Select(o => o.Text).ToList();
@@ -993,14 +995,6 @@ namespace FirstPlugin
 
             fskl.update();
             fskl.reset();
-
-            fskl.Node_Array = new int[fskl.node.SkeletonU.MatrixToBoneList.Count];
-            int nodes = 0;
-            foreach (ushort node in fskl.node.SkeletonU.MatrixToBoneList)
-            {
-                fskl.Node_Array[nodes] = node;
-                nodes++;
-            }
         }
         public static void SaveVertexBuffer(FSHP fshp)
         {
@@ -1061,24 +1055,6 @@ namespace FirstPlugin
                     vert.BufferIndex = att.BufferIndex;
                     atrib.Add(vert);
                 }
-                if (att.Name == "_w0")
-                {
-                    VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
-                    vert.Name = att.Name;
-                    vert.Data = fshp.weights.ToArray();
-                    vert.Format = att.SetTypeWiiU(att.Format);
-                    vert.BufferIndex = att.BufferIndex;
-                    atrib.Add(vert);
-                }
-                if (att.Name == "_i0")
-                {
-                    VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
-                    vert.Name = att.Name;
-                    vert.Data = fshp.boneInd.ToArray();
-                    vert.Format = att.SetTypeWiiU(att.Format);
-                    vert.BufferIndex = att.BufferIndex;
-                    atrib.Add(vert);
-                }
                 if (att.Name == "_b0")
                 {
                     VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
@@ -1105,6 +1081,33 @@ namespace FirstPlugin
                     vert.Format = att.SetTypeWiiU(att.Format);
                     vert.BufferIndex = att.BufferIndex;
                     atrib.Add(vert);
+                }
+
+                // Set _w and _i 
+                for (int i = 0; i < fshp.weights.Count; i++)
+                {
+                    if (att.Name == "_w" + i.ToString())
+                    {
+                        VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
+                        vert.Name = att.Name;
+                        vert.Data = fshp.weights[i].ToArray();
+                        vert.Format = att.SetTypeWiiU(att.Format);
+                        atrib.Add(vert);
+
+                        for (int j = 0; j < fshp.weights.Count; j++)
+                        {
+                            Console.WriteLine($"w {j} {fshp.weights[j]}");
+                        }
+
+                    }
+                    if (att.Name == "_i" + i.ToString())
+                    {
+                        VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
+                        vert.Name = att.Name;
+                        vert.Data = fshp.boneInd[i].ToArray();
+                        vert.Format = att.SetTypeWiiU(att.Format);
+                        atrib.Add(vert);
+                    }
                 }
             }
             if (atrib.Count == 0)

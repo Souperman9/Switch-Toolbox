@@ -96,22 +96,22 @@ namespace LayoutBXLYT.Cafe
         [DisplayName("Horizontal Alignment"), CategoryAttribute("Font")]
         public OriginX HorizontalAlignment
         {
-            get { return (OriginX)((TextAlignment >> 2) & 0x3); }
+            get { return (OriginX)((TextAlignment) & 0x3); }
             set
             {
-                TextAlignment &= unchecked((byte)(~0xC));
-                TextAlignment |= (byte)((byte)(value) << 2);
+                TextAlignment &= unchecked((byte)(~0x3));
+                TextAlignment |= (byte)(value);
             }
         }
 
         [DisplayName("Vertical Alignment"), CategoryAttribute("Font")]
         public OriginY VerticalAlignment
         {
-            get { return (OriginY)((TextAlignment) & 0x3); }
+            get { return (OriginY)((TextAlignment >> 2) & 0x3); }
             set
             {
-                TextAlignment &= unchecked((byte)(~0x3));
-                TextAlignment |= (byte)(value);
+                TextAlignment &= unchecked((byte)(~0xC));
+                TextAlignment |= (byte)((byte)(value) << 2);
             }
         }
 
@@ -220,6 +220,7 @@ namespace LayoutBXLYT.Cafe
         public string FontName { get; set; }
 
         private byte _flags;
+        private byte Unknown3;
 
         private float Unknown1 { get; set; }
         private float Unknown2 { get; set; }
@@ -261,7 +262,7 @@ namespace LayoutBXLYT.Cafe
             TextAlignment = reader.ReadByte();
             LineAlignment = (LineAlign)reader.ReadByte();
             _flags = reader.ReadByte();
-            reader.Seek(1); //padding
+            Unknown3 = reader.ReadByte(); 
             ItalicTilt = reader.ReadSingle();
             uint textOffset = reader.ReadUInt32();
             FontTopColor = STColor8.FromBytes(reader.ReadBytes(4));
@@ -329,7 +330,7 @@ namespace LayoutBXLYT.Cafe
             writer.Write(TextAlignment);
             writer.Write(LineAlignment, false);
             writer.Write(_flags);
-            writer.Seek(1);
+            writer.Write(Unknown3);
             writer.Write(ItalicTilt);
             long _ofsTextPos = writer.Position;
             writer.Write(0); //text offset

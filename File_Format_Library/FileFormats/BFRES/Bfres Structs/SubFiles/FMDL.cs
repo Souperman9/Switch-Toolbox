@@ -383,7 +383,7 @@ namespace Bfres.Structs
                     }
                 }
 
-                bool UseUVLayer2 = false;
+                int UseUVIndex = 0;
 
                 //for BOTW if it uses UV layer 2 for normal maps use second UV map
                 if (shp.GetFMAT().shaderassign.options.ContainsKey("uking_texture2_texcoord"))
@@ -391,10 +391,16 @@ namespace Bfres.Structs
                     float value = float.Parse(shp.GetFMAT().shaderassign.options["uking_texture2_texcoord"]);
 
                     if (value == 1)
-                        UseUVLayer2 = true;
+                        UseUVIndex = 1;
                 }
 
-                shp.CalculateTangentBitangent(UseUVLayer2);
+                //for TOTK use o_texture2_texcoord to find required uv layer for tangents
+                if (shp.GetFMAT().shaderassign.options.ContainsKey("o_texture2_texcoord"))
+                {
+                    UseUVIndex = int.TryParse(shp.GetFMAT().shaderassign.options["o_texture2_texcoord"], out UseUVIndex) ? UseUVIndex : 0;
+                }
+
+                shp.CalculateTangentBitangent(UseUVIndex);
                 shp.SaveVertexBuffer(GetResFileU() != null);
             }
 
@@ -551,6 +557,10 @@ namespace Bfres.Structs
                 default:
 
                     ExportModelSettings settings = new ExportModelSettings();
+                    // Toggle colors when necessary as we export them by force 
+                    settings.Settings.UseVertexColors = Model.VertexBuffers.Any(
+                        x => x.Attributes.Any(a => a.Name.StartsWith("_c")));
+
                     if (settings.ShowDialog() == DialogResult.OK)
                         DAE.Export(FileName, settings.Settings, this, GetTextures(),
                             Skeleton, Skeleton.Node_Array.ToList());
@@ -588,6 +598,8 @@ namespace Bfres.Structs
                     if (ftexCont.ResourceNodes.ContainsKey(texref))
                         textures.Add((FTEX)ftexCont.ResourceNodes[texref]);
                 }
+                if (PluginRuntime.TextureCache.ContainsKey(texref))
+                    textures.Add(PluginRuntime.TextureCache[texref]);
             }
 
             return textures;
@@ -606,10 +618,16 @@ namespace Bfres.Structs
         //Function addes shapes, vertices and meshes
         public void AddOjects(string FileName, ResFile resFileNX, ResU.ResFile resFileU, bool Replace = true)
         {
+            // Hack, enable saving for BFRES during model replace/edit for .ptcl files
+            // Ptcl disables saving by default due to random corruption issues
+            if (this.Parent != null)
+                ((BFRES)Parent.Parent).CanSave = true;
+
             //If using original attributes, this to look them up
             Dictionary<string, List<FSHP.VertexAttribute>> AttributeMatcher = new Dictionary<string, List<FSHP.VertexAttribute>>();
 
             bool IsWiiU = (resFileU != null);
+            var boneMappings = Model != null ? Model.Skeleton.userIndices : new ushort[0];
 
             int MatStartIndex = materials.Count;
             string ext = System.IO.Path.GetExtension(FileName);
@@ -764,12 +782,11 @@ namespace Bfres.Structs
                             if (AttributeMatcher.ContainsKey(obj.ObjectName))
                                 shape.vertexAttributes = csvsettings.CreateNewAttributes(AttributeMatcher[obj.ObjectName]);
                             else
-                                shape.vertexAttributes = csvsettings.CreateNewAttributes();
+                                shape.vertexAttributes = csvsettings.CreateNewAttributes(GetMaterial(shape.MaterialIndex));
 
                             shape.BoneIndex = 0;
                             shape.Text = obj.ObjectName;
                             shape.lodMeshes = obj.lodMeshes;
-                            shape.CreateNewBoundingBoxes();
                             shape.CreateBoneList(obj, this, ForceSkinInfluence, ForceSkinInfluenceMax);
                             shape.CreateIndexList(obj, this);
                             shape.ApplyImportSettings(csvsettings, GetMaterial(shape.MaterialIndex));
@@ -793,6 +810,7 @@ namespace Bfres.Structs
                                 shape.BoneIndex = boneIndex;
                             }
 
+                            shape.CreateNewBoundingBoxes(this);
                             shape.OptmizeAttributeFormats();
                             shape.SaveShape(IsWiiU);
                             shape.SaveVertexBuffer(IsWiiU);
@@ -881,6 +899,7 @@ namespace Bfres.Structs
                         {
                             List<FSHP> Matches = shapes.Where(p => String.Equals(p.Text,
                             ImportedObjects[i].ObjectName, StringComparison.CurrentCulture)).ToList();
+                            ImportedObjects[i].BoneIndex = 0;
 
                             if (Matches != null && Matches.Count > 0)
                             {
@@ -892,6 +911,11 @@ namespace Bfres.Structs
 
                                 if (settings.LimitSkinCount)
                                     ImportedObjects[i].VertexSkinCount = ((FSHP)Matches[0]).VertexSkinCount;
+
+                                //Keep original bone mapping by default
+                                //Only do this for original boneset for now
+                                if (!settings.ImportBones)
+                                    ImportedObjects[i].BoneIndex = ((FSHP)Matches[0]).BoneIndex;
 
                                 if (settings.UseOriginalAttributes)
                                 {
@@ -1110,21 +1134,119 @@ namespace Bfres.Structs
                             }
                         }
 
-
                         //Genericate indices
                         //Check for rigged bones
                         for (int ob = 0; ob < ImportedObjects.Count; ob++)
                         {
-                            foreach (string NewBone in ImportedObjects[ob].boneList)
-                            {
-                                foreach (var bones in Skeleton.bones)
-                                {
+                            foreach (string NewBone in ImportedObjects[ob].boneList) {
+                                foreach (var bones in Skeleton.bones) {
                                     if (bones.Text == NewBone)
                                     {
                                         bones.SmoothMatrixIndex += 1;
                                     }
                                 }
                             }
+                        }
+
+                        List<int> smoothSkinningIndices = new List<int>();
+                        List<int> rigidSkinningIndices = new List<int>();
+
+                        foreach (BfresBone bone in Skeleton.bones)
+                        {
+                            bone.SmoothMatrixIndex = -1;
+                            bone.RigidMatrixIndex = -1;
+                            if (bone.BoneU != null)
+                            {
+                                bone.BoneU.SmoothMatrixIndex = -1;
+                                bone.BoneU.RigidMatrixIndex = -1;
+                            }
+                            if (bone.Bone != null)
+                            {
+                                bone.Bone.SmoothMatrixIndex = -1;
+                                bone.Bone.RigidMatrixIndex = -1;
+                            }
+                        }
+
+                        //Determine the rigid and smooth bone skinning
+                        foreach (var mesh in ImportedObjects)
+                        {
+                            int numSkinning = 0;
+                            if (settings.LimitSkinCount)
+                                numSkinning = (byte)mesh.VertexSkinCount;
+                            else
+                                numSkinning = mesh.vertices.Max(t => t.boneNames.Count);
+
+                            //First create index lists for all the rigid and smooth skinning bone indices
+                            foreach (var vertex in mesh.vertices) {
+                                foreach (var bone in vertex.boneNames) {
+                                    var bn = Skeleton.bones.Where(x => x.Text == bone).FirstOrDefault();
+                                    if (bn != null)
+                                    {
+                                        int index = Skeleton.bones.IndexOf(bn);
+
+                                        //Rigid skinning
+                                        if (numSkinning == 1)
+                                        {
+                                            if (!rigidSkinningIndices.Contains(index))
+                                                rigidSkinningIndices.Add(index);
+                                        }
+                                        else
+                                        {
+                                            if (!smoothSkinningIndices.Contains(index))
+                                                smoothSkinningIndices.Add(index);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        //Combine these lists into one global list
+                        smoothSkinningIndices.Sort();
+                        rigidSkinningIndices.Sort();
+
+                        List<int> skinningIndices = new List<int>();
+                        skinningIndices.AddRange(smoothSkinningIndices);
+                        skinningIndices.AddRange(rigidSkinningIndices);
+                        Skeleton.Node_Array = skinningIndices.ToArray();
+
+                        //Next update the bone's skinning index value
+                        foreach (var index in smoothSkinningIndices) {
+                            var bone = Skeleton.bones[index];
+                            bone.SmoothMatrixIndex = (short)smoothSkinningIndices.IndexOf(index);
+                        }
+                        //Rigid indices go after smooth indices
+                        //Here we do not index the global iist as the global list can include the same index in both smooth/rigid
+                        foreach (var index in rigidSkinningIndices) {
+                            var bone = Skeleton.bones[index];
+                            bone.RigidMatrixIndex = (short)(smoothSkinningIndices.Count + rigidSkinningIndices.IndexOf(index));
+                        }
+
+                        //Update all the bfres data directly from the bones
+                        foreach (BfresBone bn in skeleton.bones)
+                        {
+                            if (bn.BoneU != null)
+                            {
+                                bn.BoneU.SmoothMatrixIndex = bn.SmoothMatrixIndex;
+                                bn.BoneU.RigidMatrixIndex = bn.RigidMatrixIndex;
+                            }
+                            if (bn.Bone != null)
+                            {
+                                bn.Bone.SmoothMatrixIndex = bn.SmoothMatrixIndex;
+                                bn.Bone.RigidMatrixIndex = bn.RigidMatrixIndex;
+                            }
+                        }
+
+                        if (Skeleton.node.SkeletonU != null)
+                        {
+                            Skeleton.node.SkeletonU.MatrixToBoneList = new List<ushort>();
+                            for (int i = 0; i < skinningIndices.Count; i++)
+                                Skeleton.node.SkeletonU.MatrixToBoneList.Add((ushort)skinningIndices[i]);
+                        }
+                        else
+                        {
+                            Skeleton.node.Skeleton.MatrixToBoneList = new List<ushort>();
+                            for (int i = 0; i < skinningIndices.Count; i++)
+                                Skeleton.node.Skeleton.MatrixToBoneList.Add((ushort)skinningIndices[i]);
                         }
 
                         Skeleton.CalculateIndices();
@@ -1191,12 +1313,6 @@ namespace Bfres.Structs
 
                             shape.VertexBufferIndex = shapes.Count;
                             shape.vertices = obj.vertices;
-
-                            if (AttributeMatcher.ContainsKey(obj.ObjectName))
-                                shape.vertexAttributes = settings.CreateNewAttributes(AttributeMatcher[obj.ObjectName]);
-                            else
-                                shape.vertexAttributes = settings.CreateNewAttributes();
-
                             shape.BoneIndex = obj.BoneIndex;
 
                             if (obj.MaterialIndex + MatStartIndex < materials.Count && obj.MaterialIndex > 0)
@@ -1204,36 +1320,32 @@ namespace Bfres.Structs
                             else
                                 shape.MaterialIndex = 0;
 
+                            if (AttributeMatcher.ContainsKey(obj.ObjectName))
+                                shape.vertexAttributes = settings.CreateNewAttributes(AttributeMatcher[obj.ObjectName]);
+                            else
+                                shape.vertexAttributes = settings.CreateNewAttributes(GetMaterial(shape.MaterialIndex));
+
                             shape.lodMeshes = obj.lodMeshes;
-                            shape.CreateNewBoundingBoxes();
                             shape.CreateBoneList(obj, this, ForceSkinInfluence, ForceSkinInfluenceMax);
                             shape.CreateIndexList(obj, this, ForceSkinInfluence, ForceSkinInfluenceMax);
                             shape.ApplyImportSettings(settings, GetMaterial(shape.MaterialIndex));
                             shape.BoneIndices = shape.GetIndices(Skeleton);
 
                             if (settings.CreateDummyLODs)
-                                shape.GenerateDummyLODMeshes();
+                                shape.GenerateDummyLODMeshes(settings.DummyLODCount);
 
                             if (ForceSkinInfluence)
                                 shape.VertexSkinCount = (byte)ForceSkinInfluenceMax;
                             else
                                 shape.VertexSkinCount = obj.GetMaxSkinInfluenceCount();
 
-                            if (shape.VertexSkinCount == 0 && obj.boneList.Count > 0)
-                            {
-                                int boneIndex = Skeleton.bones.FindIndex(x => x.Text == obj.boneList[0]);
-                                if (boneIndex != -1)
-                                    shape.BoneIndex = boneIndex;
-                            }
-                            else if (shape.VertexSkinCount == 1 && shape.BoneIndices.Count > 0)
-                            {
-                                int boneIndex = shape.BoneIndices[0];
-                                shape.BoneIndex = boneIndex;
-                            }
-
+                            shape.CreateNewBoundingBoxes(this);
                             shape.OptmizeAttributeFormats();
                             shape.SaveShape(IsWiiU);
                             shape.SaveVertexBuffer(IsWiiU);
+
+                            if (shape.Shape != null)
+                                shape.Shape.BoneIndex = (ushort)shape.BoneIndex;
 
                             if (IsWiiU)
                             {
@@ -1267,6 +1379,9 @@ namespace Bfres.Structs
 
             if (IsEdited)
                 UpdateVertexData();
+
+            if (Model != null)
+                Model.Skeleton.userIndices = boneMappings;
         }
 
         public FMAT GetMaterial(int index)

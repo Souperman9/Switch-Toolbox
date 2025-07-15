@@ -7,6 +7,8 @@ using Toolbox.Library.Forms;
 using Toolbox.Library.Rendering;
 using Bfres.Structs;
 using System.Linq;
+using Syroot.NintenTools.NSW.Bfres;
+using static OpenTK.Graphics.OpenGL.GL;
 
 namespace FirstPlugin
 {
@@ -21,6 +23,8 @@ namespace FirstPlugin
             CanResize = false;
             ogSkinCountChkBox.Checked = false;
             chkMapOriginalMaterials.Checked = true;
+
+            lodCountUD.Value = 2;
 
             tabControl1.myBackColor = FormThemes.BaseTheme.FormBackColor;
 
@@ -63,6 +67,8 @@ namespace FirstPlugin
         public bool ResetUVParams;
         public bool ResetColorParams;
 
+        public bool CombineUVs => combineUVs.Checked;
+
         public bool LimitSkinCount => ogSkinCountChkBox.Checked;
         public bool MapOriginalMaterials
         {
@@ -73,6 +79,7 @@ namespace FirstPlugin
         }
 
         public bool CreateDummyLODs => chkCreateDummyLODs.Checked;
+        public int DummyLODCount => (int)lodCountUD.Value;
 
         public bool UseOriginalAttributes => chkOriginalAttributesFormats.Checked;
         public bool UseOriginalAttributeFormats => chkOriginalAttributesFormats.Checked;
@@ -178,13 +185,18 @@ namespace FirstPlugin
                         Attributes[i].Format = (AttribFormat)comboBoxFormatWeights.SelectedItem;
                     if (Attributes[i].Name == "_i0")
                         Attributes[i].Format = (AttribFormat)comboBoxFormatIndices.SelectedItem;
+
+                    if (CombineUVs && Attributes[i].Name == "_u0")
+                        Attributes[i].Format = AttribFormat.Format_16_16_16_16_Single;
+
+
                 }
             }
 
             return Attributes;
         }
 
-        public List<FSHP.VertexAttribute> CreateNewAttributes()
+        public List<FSHP.VertexAttribute> CreateNewAttributes(FMAT material = null)
         {
             Dictionary<string, FSHP.VertexAttribute> attribute = new Dictionary<string, FSHP.VertexAttribute>();
 
@@ -227,20 +239,35 @@ namespace FirstPlugin
                 FSHP.VertexAttribute att = new FSHP.VertexAttribute();
                 att.Name = "_u0";
                 att.Format = (AttribFormat)comboBoxFormatUvs.SelectedItem;
+
+                if (material.shaderassign.attributes.ContainsValue("_g3d_02_u0_u1"))
+                {
+                    att.Format = AttribFormat.Format_16_16_16_16_Single;
+                    att.Name = "_g3d_02_u0_u1";
+                }
+
                 attribute.Add(att.Name, att);
             }
-            if (EnableUV1 && EnableUV0)
+            if (EnableUV1 && EnableUV0 && !attribute.ContainsKey("_g3d_02_u0_u1"))
             {
                 FSHP.VertexAttribute att = new FSHP.VertexAttribute();
                 att.Name = "_u1";
                 att.Format = (AttribFormat)comboBoxFormatUvs.SelectedItem;
                 attribute.Add(att.Name, att);
             }
+
             if (EnableUV2 && EnableUV0)
             {
                 FSHP.VertexAttribute att = new FSHP.VertexAttribute();
                 att.Name = "_u2";
                 att.Format = (AttribFormat)comboBoxFormatUvs.SelectedItem;
+
+                if (material.shaderassign.attributes.ContainsValue("_g3d_02_u2_u3"))
+                {
+                    att.Format = AttribFormat.Format_16_16_16_16_Single;
+                    att.Name = "_g3d_02_u2_u3";
+                }
+
                 attribute.Add(att.Name, att);
             }
             if (EnableTangents)
@@ -270,6 +297,25 @@ namespace FirstPlugin
                 att.Name = "_i0";
                 att.Format = (AttribFormat)comboBoxFormatIndices.SelectedItem;
                 attribute.Add(att.Name, att);
+            }
+
+            if (material.shaderassign.attributes.ContainsValue("_c0") && !EnableVertexColors)
+            {
+                FSHP.VertexAttribute att = new FSHP.VertexAttribute();
+                att.Name = "_c0";
+                att.Format = (AttribFormat)comboBoxFormatVertexColors.SelectedItem;
+                attribute.Add(att.Name, att);
+            }
+
+            for (int i = 1; i < 6; i++)
+            {
+                if (material.shaderassign.attributes.ContainsValue($"_c{i}"))
+                {
+                    FSHP.VertexAttribute att = new FSHP.VertexAttribute();
+                    att.Name = $"_c{i}";
+                    att.Format = (AttribFormat)comboBoxFormatVertexColors.SelectedItem;
+                    attribute.Add(att.Name, att);
+                }
             }
 
             switch ((GamePreset)gamePresetCB.SelectedItem)
@@ -389,6 +435,7 @@ namespace FirstPlugin
             comboBoxFormatUvs.Items.Add(AttribFormat.Format_32_32_Single);
             comboBoxFormatUvs.Items.Add(AttribFormat.Format_16_16_Single);
             comboBoxFormatUvs.Items.Add(AttribFormat.Format_16_16_SNorm);
+            comboBoxFormatUvs.Items.Add(AttribFormat.Format_16_16_UNorm);
             comboBoxFormatUvs.Items.Add(AttribFormat.Format_8_8_SNorm);
             comboBoxFormatUvs.Items.Add(AttribFormat.Format_8_8_UNorm);
             comboBoxFormatUvs.SelectedIndex = 1;

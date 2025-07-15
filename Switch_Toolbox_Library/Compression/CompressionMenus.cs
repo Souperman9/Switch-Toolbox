@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -21,12 +22,13 @@ namespace Toolbox.Library.IO
             var items = new List<ToolStripMenuItem>();
             items.Add(CreateMenu("Yaz0"));
             items.Add(CreateMenu("Gzip"));
-            items.Add(CreateMenu("LZ77 (Wii Type 11)", false));
+            items.Add(CreateMenu("LZ77 (Wii Type 11)"));
             items.Add(CreateMenu("LZSS", false));
             items.Add(CreateMenu("lZMA"));
             items.Add(CreateMenu("lZ4"));
             items.Add(CreateMenu("lZ4F"));
             items.Add(CreateMenu("ZSTD"));
+            items.Add(CreateMenu("ZSTD (Kirby)"));
             items.Add(CreateMenu("ZLIB"));
             items.Add(CreateMenu("ZLIB_GZ (Hyrule Warriors)"));
             return items;
@@ -82,6 +84,8 @@ namespace Toolbox.Library.IO
                 OpenFileForCompression(new LZ4F(), Compress);
             else if (Name == "ZSTD")
                 OpenFileForCompression(new Zstb(), Compress);
+            else if (Name == "ZSTD (Kirby)")
+                OpenFileForCompression(new Zstb_Kirby(), Compress);
             else if (Name == "ZLIB")
                 OpenFileForCompression(new Zlib(), Compress);
             else if (Name.Contains("ZLIB_GZ"))
@@ -110,7 +114,7 @@ namespace Toolbox.Library.IO
             if (fileNames.Length == 0)
                 return;
 
-            string ext = Compress ? ".comp" : ".dec";
+            string ext = Compress ? ".comp" : "";
             if (compressionFormat.Extension.Length > 0 && Compress)
                 ext = compressionFormat.Extension[0].Replace("*", string.Empty);
 
@@ -123,6 +127,7 @@ namespace Toolbox.Library.IO
                     foreach (var file in fileNames)
                     {
                         string name = Path.GetFileName(file);
+                        name = name.Count(c => c == '.') > 1 && !Compress ? name.Remove(name.LastIndexOf('.')) : name;
                         using (var data = new FileStream(file, FileMode.Open, FileAccess.Read))
                         {
                             try
@@ -179,7 +184,7 @@ namespace Toolbox.Library.IO
                                 stream = compressionFormat.Compress(data);
                             else
                             {
-                                compressionFormat.Identify(data, sfd.FileName);
+                                compressionFormat.Identify(data, fileNames[0]);
                                 stream = compressionFormat.Decompress(data);
                             }
 

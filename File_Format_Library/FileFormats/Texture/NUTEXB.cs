@@ -57,81 +57,29 @@ namespace FirstPlugin
             }
         }
 
-        public enum NUTEXImageFormat : byte
+        public enum NUTEXImageFormat : short
         {
-            R8G8B8A8_UNORM = 0x00,
-            R8G8B8A8_SRGB = 0x05,
-            R32G32B32A32_FLOAT = 0x34,
-            B8G8R8A8_UNORM = 0x50,
-            B8G8R8A8_SRGB = 0x55,
-            BC1_UNORM = 0x80,
-            BC1_SRGB = 0x85,
-            BC2_UNORM = 0x90,
-            BC2_SRGB = 0x95,
-            BC3_UNORM = 0xa0,
-            BC3_SRGB = 0xa5,
-            BC4_UNORM = 0xb0,
-            BC4_SNORM = 0xb5,
-            BC5_UNORM = 0xc0,
-            BC5_SNORM = 0xc5,
-            BC6_UFLOAT = 0xd7,
-            BC7_UNORM = 0xe0,
-            BC7_SRGB = 0xe5,
+            R8G8B8A8_UNORM = 0x0400,
+            R8G8B8A8_SRGB = 0x0405,
+            R32G32B32A32_FLOAT = 0x0434,
+            B8G8R8A8_UNORM = 0x0450,
+            B8G8R8A8_SRGB = 0x0455,
+            BC1_UNORM = 0x0480,
+            BC1_SRGB = 0x0485,
+            BC2_UNORM = 0x0490,
+            BC2_SRGB = 0x0495,
+            BC3_UNORM = 0x04a0,
+            BC3_SRGB = 0x04a5,
+            BC4_UNORM = 0x0180,
+            BC4_SNORM = 0x0185,
+            BC5_UNORM = 0x0280,
+            BC5_SNORM = 0x0285,
+            BC6_UFLOAT = 0x04d7,
+            BC6_SFLOAT = 0x04d8,
+            BC7_UNORM = 0x04e0,
+            BC7_SRGB = 0x04e5,
         };
 
-        public static uint blk_dims(byte format)
-        {
-            switch (format)
-            {
-                case (byte)NUTEXImageFormat.BC1_UNORM:
-                case (byte)NUTEXImageFormat.BC1_SRGB:
-                case (byte)NUTEXImageFormat.BC2_UNORM:
-                case (byte)NUTEXImageFormat.BC2_SRGB:
-                case (byte)NUTEXImageFormat.BC3_UNORM:
-                case (byte)NUTEXImageFormat.BC3_SRGB:
-                case (byte)NUTEXImageFormat.BC4_UNORM:
-                case (byte)NUTEXImageFormat.BC4_SNORM:
-                case (byte)NUTEXImageFormat.BC5_UNORM:
-                case (byte)NUTEXImageFormat.BC5_SNORM:
-                case (byte)NUTEXImageFormat.BC6_UFLOAT:
-                case (byte)NUTEXImageFormat.BC7_UNORM:
-                case (byte)NUTEXImageFormat.BC7_SRGB:
-                    return 0x44;
-
-                default: return 0x11;
-            }
-        }
-
-        public static uint bpps(byte format)
-        {
-            switch (format)
-            {
-                case (byte)NUTEXImageFormat.B8G8R8A8_UNORM:
-                case (byte)NUTEXImageFormat.B8G8R8A8_SRGB:
-                case (byte)NUTEXImageFormat.R8G8B8A8_UNORM:
-                case (byte)NUTEXImageFormat.R8G8B8A8_SRGB:
-                    return 4;
-
-                case (byte)NUTEXImageFormat.BC1_UNORM:
-                case (byte)NUTEXImageFormat.BC1_SRGB:
-                case (byte)NUTEXImageFormat.BC4_UNORM:
-                case (byte)NUTEXImageFormat.BC4_SNORM:
-                    return 8;
-
-                case (byte)NUTEXImageFormat.R32G32B32A32_FLOAT:
-                case (byte)NUTEXImageFormat.BC2_UNORM:
-                case (byte)NUTEXImageFormat.BC2_SRGB:
-                case (byte)NUTEXImageFormat.BC3_UNORM:
-                case (byte)NUTEXImageFormat.BC3_SRGB:
-                case (byte)NUTEXImageFormat.BC5_UNORM:
-                case (byte)NUTEXImageFormat.BC5_SNORM:
-                case (byte)NUTEXImageFormat.BC6_UFLOAT:
-                case (byte)NUTEXImageFormat.BC7_UNORM:
-                case (byte)NUTEXImageFormat.BC7_SRGB:
-                    return 16;
-                default: return 0x00;
-            }
-        }
 
         public Type[] Types
         {
@@ -216,8 +164,8 @@ namespace FirstPlugin
             public uint ImageSize { get; set; }
         }
 
-        public uint unk;
         public int unk2;
+        public uint FileVersion = 131073;
 
         public NUTEXImageFormat NutFormat;
         public List<uint[]> mipSizes = new List<uint[]>();
@@ -246,7 +194,7 @@ namespace FirstPlugin
 
         public override void Replace(string FileName)
         {
-            if (Runtime.NUTEXBSettings.IsSwizzled)
+            if (Alignment != 0)
             {
                 var tex = new TextureData();
                 tex.Replace(FileName, MipCount, 0, Format);
@@ -264,13 +212,13 @@ namespace FirstPlugin
                 Width = tex.Texture.Width;
                 Height = tex.Texture.Height;
                 MipCount = tex.Texture.MipCount;
-                // ArrayCount = tex.Texture.ArrayLength;
-                // Depth = tex.Texture.Depth;
+                ArrayCount = tex.Texture.ArrayLength;
+                Depth = tex.Texture.Depth;
 
                 Format = tex.Format;
                 NutFormat = ConvertGenericToNutFormat(tex.Format);
 
-                mipSizes = TegraX1Swizzle.GenerateMipSizes(tex.Format, tex.Width, tex.Height, tex.Depth, tex.ArrayCount, tex.MipCount, (uint)ImageData.Length);
+                mipSizes = TegraX1Swizzle.GenerateMipSizes(tex.Format, tex.Width, tex.Height, tex.Depth, tex.ArrayCount, tex.MipCount);
 
                 ImageData = SetImageData(output);
 
@@ -370,6 +318,9 @@ namespace FirstPlugin
             SelectedImageKey = "Texture";
 
             long pos = reader.BaseStream.Length;
+            reader.Seek(pos - 4, SeekOrigin.Begin);
+            FileVersion = reader.ReadUInt32();
+
             string magic = reader.ReadMagic((int)pos - 7, 3);//Check magic first!
 
             if (magic != "XET")
@@ -387,7 +338,6 @@ namespace FirstPlugin
             Height = reader.ReadUInt32();
             Depth = reader.ReadUInt32(); //3d textures
             NutFormat = reader.ReadEnum<NUTEXImageFormat>(true);
-            unk = reader.ReadByte(); //Related to pixel type?? 
             ushort padding3 = reader.ReadUInt16();
             unk2 = reader.ReadInt32();
             MipCount = reader.ReadUInt32();
@@ -428,6 +378,7 @@ namespace FirstPlugin
                 case TEX_FORMAT.BC5_UNORM: return NUTEXImageFormat.BC5_UNORM;
                 case TEX_FORMAT.BC5_SNORM: return NUTEXImageFormat.BC5_SNORM;
                 case TEX_FORMAT.BC6H_UF16: return NUTEXImageFormat.BC6_UFLOAT;
+                case TEX_FORMAT.BC6H_SF16: return NUTEXImageFormat.BC6_SFLOAT;
                 case TEX_FORMAT.BC7_UNORM: return NUTEXImageFormat.BC7_UNORM;
                 case TEX_FORMAT.BC7_UNORM_SRGB: return NUTEXImageFormat.BC7_SRGB;
                 case TEX_FORMAT.R32G32B32A32_FLOAT: return NUTEXImageFormat.R32G32B32A32_FLOAT;
@@ -447,6 +398,7 @@ namespace FirstPlugin
                 case NUTEXImageFormat.BC1_SRGB: return TEX_FORMAT.BC1_UNORM_SRGB;
                 case NUTEXImageFormat.BC1_UNORM: return TEX_FORMAT.BC1_UNORM;
                 case NUTEXImageFormat.BC2_UNORM: return TEX_FORMAT.BC2_UNORM;
+                case NUTEXImageFormat.BC2_SRGB: return TEX_FORMAT.BC2_UNORM_SRGB;
                 case NUTEXImageFormat.BC3_UNORM: return TEX_FORMAT.BC3_UNORM;
                 case NUTEXImageFormat.BC3_SRGB: return TEX_FORMAT.BC3_UNORM_SRGB;
                 case NUTEXImageFormat.BC4_UNORM: return TEX_FORMAT.BC4_UNORM;
@@ -454,6 +406,7 @@ namespace FirstPlugin
                 case NUTEXImageFormat.BC5_UNORM: return TEX_FORMAT.BC5_UNORM;
                 case NUTEXImageFormat.BC5_SNORM: return TEX_FORMAT.BC5_SNORM;
                 case NUTEXImageFormat.BC6_UFLOAT: return TEX_FORMAT.BC6H_UF16;
+                case NUTEXImageFormat.BC6_SFLOAT: return TEX_FORMAT.BC6H_SF16;
                 case NUTEXImageFormat.BC7_UNORM: return TEX_FORMAT.BC7_UNORM;
                 case NUTEXImageFormat.BC7_SRGB: return TEX_FORMAT.BC7_UNORM_SRGB;
                 case NUTEXImageFormat.R32G32B32A32_FLOAT: return TEX_FORMAT.R32G32B32A32_FLOAT;
@@ -469,19 +422,19 @@ namespace FirstPlugin
             TextureName = Text;
             Console.WriteLine($"Text {Text}");
 
-            //MipSizes stores mip sizes for multile arrays
+            // MipSizes stores mip sizes for multiple arrays
             int arrayCount = mipSizes.Count;
 
-            //Mip sizes for the first array
+            // Mip sizes for the first array
             int mipCount = mipSizes[0].Length;
 
-            writer.Write(ImageData); //Write textue block first
+            writer.Write(ImageData); //Write texture block first
 
             long headerStart = writer.Position;
             foreach (var mips in mipSizes)
             {
                 long MipStart = writer.Position;
-                writer.Write(mips); //Write textue block first
+                writer.Write(mips); //Write texture block first
 
                 writer.Seek(MipStart + 0x40, System.IO.SeekOrigin.Begin);
             }
@@ -494,8 +447,7 @@ namespace FirstPlugin
             writer.Write(Width);
             writer.Write(Height);
             writer.Write(Depth);
-            writer.Write((byte)NutFormat);
-            writer.Write((byte)unk);
+            writer.Write((short)NutFormat);
             writer.Seek(2); //padding
             writer.Write(unk2);
             writer.Write(mipCount);
@@ -503,7 +455,7 @@ namespace FirstPlugin
             writer.Write(arrayCount);
             writer.Write(ImageData.Length);
             writer.WriteSignature(" XET");
-            writer.Write(131073);
+            writer.Write(FileVersion);
 
             writer.Close();
             writer.Dispose();
@@ -511,7 +463,7 @@ namespace FirstPlugin
 
         public override void SetImageData(Bitmap bitmap, int ArrayLevel)
         {
-            if (!Runtime.NUTEXBSettings.IsSwizzled)
+            if (Alignment == 0)
             {
                 MipCount = GenerateMipCount(bitmap.Width, bitmap.Height);
                 ImageData = GenerateMipsAndCompress(bitmap, MipCount, Format);
@@ -530,7 +482,7 @@ namespace FirstPlugin
             tex.TextureData = new List<List<byte[]>>();
 
             STChannelType[] channels = SetChannelsByFormat(Format);
-            tex.sparseBinding  = 0; //false
+            tex.sparseBinding = 0; //false
             tex.sparseResidency = 0; //false
             tex.Flags = 0;
             tex.Swizzle = 0;
@@ -561,8 +513,9 @@ namespace FirstPlugin
 
         public override byte[] GetImageData(int ArrayLevel = 0, int MipLevel = 0, int DepthLevel = 0)
         {
-            if (!Runtime.NUTEXBSettings.IsSwizzled)
-                return DDS.GetArrayFaces(this, ImageData, 1)[ArrayLevel].mipmaps[0];
+            // TODO: Rename this to Swizzled?
+            if (Alignment == 0)
+                return DDS.GetArrayFaces(this, ImageData, ArrayCount)[ArrayLevel].mipmaps[MipLevel];
 
             return TegraX1Swizzle.GetImageData(this, ImageData, ArrayLevel, MipLevel, DepthLevel, 1);
         }
@@ -584,30 +537,25 @@ namespace FirstPlugin
         public override ToolStripItem[] GetContextMenuItems()
         {
             List<ToolStripItem> Items = new List<ToolStripItem>();
-            Items.Add(new STToolStipMenuItem("Use Size Restrictions", null, UseSizeRestrictionsAction, Keys.Control | Keys.U) 
+            Items.Add(new STToolStipMenuItem("Use Size Restrictions", null, UseSizeRestrictionsAction, Keys.Control | Keys.U)
             { Checked = Runtime.NUTEXBSettings.LimitFileSize, CheckOnClick = true });
 
             Items.Add(new STToolStipMenuItem("Save", null, SaveAction, Keys.Control | Keys.T));
-            Items.Add(new STToolStipMenuItem("Taiko no Tatsujin fix", null, SwizzleToggle, Keys.Control | Keys.S)
-            { Checked = !Runtime.NUTEXBSettings.IsSwizzled, CheckOnClick = true });
 
-            Items.Add(new STToolStipMenuItem("Force padding for smaller file sizes", null, PaddingToggle, Keys.Control | Keys.P) 
+            Items.Add(new STToolStipMenuItem("Force padding for smaller file sizes", null, PaddingToggle, Keys.Control | Keys.P)
             { Checked = Runtime.NUTEXBSettings.PadFileSize, CheckOnClick = true });
 
             Items.AddRange(base.GetContextMenuItems());
             return Items.ToArray();
         }
 
-        private void SwizzleToggle(object sender, EventArgs args) {
-            Runtime.NUTEXBSettings.IsSwizzled = ((STToolStipMenuItem)sender).Checked ? false : true;
-            UpdateEditor();
-        }
-
-        private void PaddingToggle(object sender, EventArgs args) {
+        private void PaddingToggle(object sender, EventArgs args)
+        {
             Runtime.NUTEXBSettings.PadFileSize = ((STToolStipMenuItem)sender).Checked ? true : false;
         }
 
-        private void UseSizeRestrictionsAction(object sender, EventArgs args) {
+        private void UseSizeRestrictionsAction(object sender, EventArgs args)
+        {
             Runtime.NUTEXBSettings.LimitFileSize = ((STToolStipMenuItem)sender).Checked ? true : false;
         }
 

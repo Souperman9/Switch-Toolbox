@@ -22,6 +22,8 @@ namespace Toolbox.Library.Forms
         {
             InitializeComponent();
 
+            gammaUD.Value = 2.2m;
+
             if (Runtime.UseLegacyGL)
                 glControl = new GL_ControlLegacy();
             else
@@ -34,15 +36,25 @@ namespace Toolbox.Library.Forms
         }
 
         private STGenericTexture ActiveTexture;
+        private DrawableSkybox skybox = new DrawableSkybox();
+
         public void LoadTexture(STGenericTexture texture)
         {
             ActiveTexture = texture;
 
-            var skybox = new DrawableSkybox();
             skybox.ForceDisplay = true;
             skybox.LoadCustomTexture(ActiveTexture);
-
             glControl.MainDrawable = skybox;
+        }
+
+        private void encodeHDRAlphaChk_CheckedChanged(object sender, EventArgs e) {
+            skybox.HDREncoded = encodeHDRAlphaChk.Checked;
+            glControl?.Invalidate();
+        }
+
+        private void gammaUD_ValueChanged(object sender, EventArgs e) {
+            skybox.Gamma = (float)gammaUD.Value;
+            glControl?.Invalidate();
         }
     }
 }

@@ -128,8 +128,8 @@ namespace Toolbox.Library
 
         }
 
-        public void Save(System.IO.Stream stream)
-        {
+        public void Save(System.IO.Stream stream) {
+            Save(this, stream, GetSurfaces());
         }
 
 
@@ -499,7 +499,7 @@ namespace Toolbox.Library
 
         public void Load(BinaryDataReader reader)
         {
-            Text = FileName;
+            Text = Path.GetFileNameWithoutExtension(FileName);
 
             reader.Seek(0);
             string Magic = reader.ReadString(4);
@@ -581,6 +581,19 @@ namespace Toolbox.Library
             }
 
             reader.TemporarySeek((int)(4 + header.size + DX10HeaderSize), SeekOrigin.Begin);
+            var UbiExtraData = reader.ReadUInt16();
+            reader.TemporarySeek(-2, SeekOrigin.Current);
+            if (UbiExtraData == 12816 || UbiExtraData == 1331 && IsDX10) //me when ubisoft | for some reason theres some extra data on some mario rabbids textures god knows what it is
+            {
+                if (header.width == 1024 && header.height == 1024)
+                {
+                    reader.TemporarySeek((int)(4 + 30 + header.size + DX10HeaderSize), SeekOrigin.Begin);
+                }
+                if (header.width == 512 && header.height == 512)
+                {
+                    reader.TemporarySeek((int)(4 + 26 + header.size + DX10HeaderSize), SeekOrigin.Begin);
+                }
+            }
             bdata = reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position));
 
             Format = GetFormat();
@@ -1348,7 +1361,12 @@ namespace Toolbox.Library
 
         public void Save(DDS dds, string FileName, List<Surface> data = null)
         {
-            FileWriter writer = new FileWriter(new FileStream(FileName, FileMode.Create, FileAccess.Write, FileShare.Write));
+            Save(dds, new FileStream(FileName, FileMode.Create, FileAccess.Write, FileShare.Write), data);
+        }
+
+        public void Save(DDS dds, Stream stream, List<Surface> data = null)
+        {
+            FileWriter writer = new FileWriter(stream);
             var header = dds.header;
             writer.Write(Encoding.ASCII.GetBytes("DDS "));
             writer.Write(header.size);

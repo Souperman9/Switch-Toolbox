@@ -11,6 +11,7 @@ using Bfres.Structs;
 using ResU = Syroot.NintenTools.Bfres;
 using Syroot.NintenTools.NSW.Bfres;
 using Toolbox.Library.Forms;
+using Toolbox.Library;
 
 namespace FirstPlugin.Forms
 {
@@ -22,6 +23,9 @@ namespace FirstPlugin.Forms
 
             BackColor = FormThemes.BaseTheme.FormBackColor;
             ForeColor = FormThemes.BaseTheme.FormForeColor;
+
+            textBox1.BackColor = FormThemes.BaseTheme.ListViewBackColor;
+            textBox1.ForeColor = FormThemes.BaseTheme.FormForeColor;
         }
 
         public FSKL activeSkeleton;
@@ -58,6 +62,12 @@ namespace FirstPlugin.Forms
 
                 rotationModeCB.SelectedItem = fskl.node.Skeleton.FlagsRotation;
                 scalingModeCB.SelectedItem = fskl.node.Skeleton.FlagsScaling;
+            }
+
+            if (fskl.node.Skeleton != null && fskl.node.Skeleton.userIndices != null)
+            {
+                var indices = string.Join(",", fskl.node.Skeleton.userIndices);
+                this.textBox1.Text = indices;
             }
 
             IsLoaded = true;
@@ -112,11 +122,38 @@ namespace FirstPlugin.Forms
             {
                 activeSkeleton.node.SkeletonU.FlagsRotation = (ResU.SkeletonFlagsRotation)rotationModeCB.SelectedItem;
                 activeSkeleton.node.SkeletonU.FlagsScaling = (ResU.SkeletonFlagsScaling)scalingModeCB.SelectedItem;
+
+                foreach (var bone in activeSkeleton.bones)
+                    bone.UseSegmentScaleCompensate = activeSkeleton.node.SkeletonU.FlagsScaling.HasFlag(SkeletonFlagsScaling.Maya);
+                activeSkeleton.update();
             }
             else
             {
                 activeSkeleton.node.Skeleton.FlagsRotation = (SkeletonFlagsRotation)rotationModeCB.SelectedItem;
                 activeSkeleton.node.Skeleton.FlagsScaling = (SkeletonFlagsScaling)scalingModeCB.SelectedItem;
+
+                foreach (var bone in activeSkeleton.bones)
+                    bone.UseSegmentScaleCompensate = activeSkeleton.node.Skeleton.FlagsScaling.HasFlag(SkeletonFlagsScaling.Maya);
+                activeSkeleton.update();
+            }
+            LibraryGUI.UpdateViewport();
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            if (activeSkeleton.node.Skeleton != null)
+            {
+                List<ushort> indices = new List<ushort>();
+
+                foreach (var line in textBox1.Text.Split(','))
+                {
+                    if (string.IsNullOrEmpty(line))
+                        continue;
+
+                    if (ushort.TryParse(line, out ushort id))
+                        indices.Add(id);
+                }
+                activeSkeleton.node.Skeleton.userIndices = indices.ToArray();
             }
         }
     }

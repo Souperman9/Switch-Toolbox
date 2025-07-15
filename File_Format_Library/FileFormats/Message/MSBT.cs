@@ -15,7 +15,7 @@ namespace FirstPlugin
     {
         public FileType FileType { get; set; } = FileType.Message;
 
-        public bool CanSave { get; set; }
+        public bool CanSave { get; set; } = true;
         public string[] Description { get; set; } = new string[] { "Message Studio Binary Text" };
         public string[] Extension { get; set; } = new string[] { "*.msbt" };
         public string FileName { get; set; }
@@ -71,8 +71,6 @@ namespace FirstPlugin
 
         public void Load(System.IO.Stream stream)
         {
-            CanSave = false;
-
             header = new Header();
             header.Read(new FileReader(stream));
         }
@@ -114,7 +112,7 @@ namespace FirstPlugin
                 Label1 = new LBL1();
                 NLI1 = new NLI1();
                 Text2 = new TXT2();
-
+                 
                 reader.ByteOrder = Syroot.BinaryData.ByteOrder.BigEndian;
                 reader.ReadSignature(8, "MsgStdBn");
                 ByteOrderMark = reader.ReadUInt16();
@@ -138,6 +136,9 @@ namespace FirstPlugin
 
                 for (int i = 0; i < SectionCount; i++)
                 {
+                    if (reader.EndOfStream)
+                        break;
+
                     long pos = reader.Position;
 
                     string Signature = reader.ReadString(4, Encoding.ASCII);
@@ -154,6 +155,7 @@ namespace FirstPlugin
                             entries.Add(NLI1);
                             break;
                         case "TXT2":
+                        case "TXTW":
                             Text2 = new TXT2();
                             Text2.Signature = Signature;
                             Text2.Read(reader, this);
@@ -262,16 +264,21 @@ namespace FirstPlugin
         {
             private uint _index;
 
+            public byte[] OriginalDataCached = new byte[0];
+
             public StringEntry(byte[] data) {
                 Data = data;
+                OriginalDataCached = Data;
             }
 
             public StringEntry(byte[] data, Encoding encoding) {
                 Data = data;
+                OriginalDataCached = Data;
             }
 
             public StringEntry(string text, Encoding encoding) {
                 Data = encoding.GetBytes(text);
+                OriginalDataCached = encoding.GetBytes(text);
             }
 
             public uint Index
@@ -291,6 +298,15 @@ namespace FirstPlugin
             public string GetText(Encoding encoding)
             {
                 return encoding.GetString(Data);
+            }
+
+            public string GetOriginalText(Encoding encoding) {
+                return encoding.GetString(OriginalDataCached);
+            }
+
+            public void SetText(string text, Encoding encoding)
+            {
+                Data = encoding.GetBytes(text);
             }
 
             public byte[] ToBytes(Encoding encoding, bool isBigEndian)
@@ -315,6 +331,12 @@ namespace FirstPlugin
                             {
                                 writer.Write((byte)text[++i]);
                             }
+                        }
+                        if (c == 0xF)
+                        {
+                            //end tag
+                            writer.Write((short)text[++i]);
+                            writer.Write((short)text[++i]);
                         }
                     }
                     writer.Write('\0');

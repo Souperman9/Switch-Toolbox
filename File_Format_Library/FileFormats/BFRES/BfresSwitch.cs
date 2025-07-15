@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -263,10 +263,18 @@ namespace FirstPlugin
             Syroot.Maths.Vector4F[] vec4uv1 = new Syroot.Maths.Vector4F[0];
             Syroot.Maths.Vector4F[] vec4uv2 = new Syroot.Maths.Vector4F[0];
             Syroot.Maths.Vector4F[] vec4c0 = new Syroot.Maths.Vector4F[0];
+            Syroot.Maths.Vector4F[] vec4c1 = new Syroot.Maths.Vector4F[0];
+            Syroot.Maths.Vector4F[] vec4c2 = new Syroot.Maths.Vector4F[0];
+            Syroot.Maths.Vector4F[] vec4c3 = new Syroot.Maths.Vector4F[0];
             Syroot.Maths.Vector4F[] vec4t0 = new Syroot.Maths.Vector4F[0];
             Syroot.Maths.Vector4F[] vec4b0 = new Syroot.Maths.Vector4F[0];
             Syroot.Maths.Vector4F[] vec4w0 = new Syroot.Maths.Vector4F[0];
+            Syroot.Maths.Vector4F[] vec4w1 = new Syroot.Maths.Vector4F[0];
             Syroot.Maths.Vector4F[] vec4i0 = new Syroot.Maths.Vector4F[0];
+            Syroot.Maths.Vector4F[] vec4i1 = new Syroot.Maths.Vector4F[0];
+
+            Syroot.Maths.Vector4F[] vec4uv01 = new Syroot.Maths.Vector4F[0];
+            Syroot.Maths.Vector4F[] vec4uv23 = new Syroot.Maths.Vector4F[0];
 
             //For shape morphing
             Syroot.Maths.Vector4F[] vec4Positions1 = new Syroot.Maths.Vector4F[0];
@@ -290,6 +298,12 @@ namespace FirstPlugin
                     vec4uv2 = AttributeData(att, helper, "_u2");
                 if (att.Name == "_c0")
                     vec4c0 = AttributeData(att, helper, "_c0");
+                if (att.Name == "_c1")
+                    vec4c1 = AttributeData(att, helper, "_c1");
+                if (att.Name == "_c2")
+                    vec4c2 = AttributeData(att, helper, "_c2");
+                if (att.Name == "_c3")
+                    vec4c3 = AttributeData(att, helper, "_c3");
                 if (att.Name == "_t0")
                     vec4t0 = AttributeData(att, helper, "_t0");
                 if (att.Name == "_b0")
@@ -298,6 +312,10 @@ namespace FirstPlugin
                     vec4w0 = AttributeData(att, helper, "_w0");
                 if (att.Name == "_i0")
                     vec4i0 = AttributeData(att, helper, "_i0");
+                if (att.Name == "_g3d_02_u0_u1")
+                    vec4uv01 = AttributeData(att, helper, "_g3d_02_u0_u1");
+                if (att.Name == "_g3d_02_u2_u3")
+                    vec4uv23 = AttributeData(att, helper, "_g3d_02_u2_u3");
 
                 if (att.Name == "_p1")
                     vec4Positions1 = AttributeData(att, helper, "_p1");
@@ -324,19 +342,60 @@ namespace FirstPlugin
                 if (vec4uv2.Length > 0)
                     v.uv2 = new Vector2(vec4uv2[i].X, vec4uv2[i].Y);
 
+                if (vec4uv01.Length > 0)
+                {
+                    v.uv0 = new Vector2(vec4uv01[i].X, vec4uv01[i].Y);
+                    v.uv1 = new Vector2(vec4uv01[i].Z, vec4uv01[i].W);
+                }
+                if (vec4uv23.Length > 0)
+                {
+                    v.uv2 = new Vector2(vec4uv23[i].X, vec4uv23[i].Y);
+                    v.uv3 = new Vector2(vec4uv23[i].Z, vec4uv23[i].W);
+                }
+
                 if (vec4w0.Length > 0)
                 {
-                    v.boneWeights.Add(vec4w0[i].X);
-                    v.boneWeights.Add(vec4w0[i].Y);
-                    v.boneWeights.Add(vec4w0[i].Z);
-                    v.boneWeights.Add(vec4w0[i].W);
+                    if (fshp.VertexSkinCount > 0)
+                        v.boneWeights.Add(vec4w0[i].X);
+                    if (fshp.VertexSkinCount > 1)
+                        v.boneWeights.Add(vec4w0[i].Y);
+                    if (fshp.VertexSkinCount > 2)
+                        v.boneWeights.Add(vec4w0[i].Z);
+                    if (fshp.VertexSkinCount > 3)
+                        v.boneWeights.Add(vec4w0[i].W);
+                }
+                if (vec4w1.Length > 0)
+                {
+                    if (fshp.VertexSkinCount > 4)
+                        v.boneWeights.Add(vec4w1[i].X);
+                    if (fshp.VertexSkinCount > 5)
+                        v.boneWeights.Add(vec4w1[i].Y);
+                    if (fshp.VertexSkinCount > 6)
+                        v.boneWeights.Add(vec4w1[i].Z);
+                    if (fshp.VertexSkinCount > 7)
+                        v.boneWeights.Add(vec4w1[i].W);
                 }
                 if (vec4i0.Length > 0)
                 {
-                    v.boneIds.Add((int)vec4i0[i].X);
-                    v.boneIds.Add((int)vec4i0[i].Y);
-                    v.boneIds.Add((int)vec4i0[i].Z);
-                    v.boneIds.Add((int)vec4i0[i].W);
+                    if (fshp.VertexSkinCount > 0)
+                        v.boneIds.Add((int)vec4i0[i].X);
+                    if (fshp.VertexSkinCount > 1)
+                        v.boneIds.Add((int)vec4i0[i].Y);
+                    if (fshp.VertexSkinCount > 2)
+                        v.boneIds.Add((int)vec4i0[i].Z);
+                    if (fshp.VertexSkinCount > 3)
+                        v.boneIds.Add((int)vec4i0[i].W);
+                }
+                if (vec4i1.Length > 0)
+                {
+                    if (fshp.VertexSkinCount > 4)
+                        v.boneIds.Add((int)vec4i1[i].X);
+                    if (fshp.VertexSkinCount > 5)
+                        v.boneIds.Add((int)vec4i1[i].Y);
+                    if (fshp.VertexSkinCount > 6)
+                        v.boneIds.Add((int)vec4i1[i].Z);
+                    if (fshp.VertexSkinCount > 7)
+                        v.boneIds.Add((int)vec4i1[i].W);
                 }
 
                 if (vec4t0.Length > 0)
@@ -345,6 +404,12 @@ namespace FirstPlugin
                     v.bitan = new Vector4(vec4b0[i].X, vec4b0[i].Y, vec4b0[i].Z, vec4b0[i].W);
                 if (vec4c0.Length > 0)
                     v.col = new Vector4(vec4c0[i].X, vec4c0[i].Y, vec4c0[i].Z, vec4c0[i].W);
+                if (vec4c1.Length > 0)
+                    v.col2 = new Vector4(vec4c1[i].X, vec4c1[i].Y, vec4c1[i].Z, vec4c1[i].W);
+                if (vec4c2.Length > 0)
+                    v.col3 = new Vector4(vec4c2[i].X, vec4c2[i].Y, vec4c2[i].Z, vec4c2[i].W);
+                if (vec4c3.Length > 0)
+                    v.col4 = new Vector4(vec4c3[i].X, vec4c3[i].Y, vec4c3[i].Z, vec4c3[i].W);
 
                 if (fshp.VertexSkinCount == 1)
                 {
@@ -359,6 +424,8 @@ namespace FirstPlugin
                         Matrix4 sb = model.Skeleton.bones[boneIndex].Transform;
                         v.pos = Vector3.TransformPosition(v.pos, sb);
                         v.nrm = Vector3.TransformNormal(v.nrm, sb);
+                        v.tan.Xyz = Vector3.TransformNormal(v.tan.Xyz, sb);
+                        v.bitan.Xyz = Vector3.TransformNormal(v.bitan.Xyz, sb);
                     }
                 }
                 if (fshp.VertexSkinCount == 0)
@@ -368,6 +435,8 @@ namespace FirstPlugin
                     Matrix4 NoBindFix = model.Skeleton.bones[boneIndex].Transform;
                     v.pos = Vector3.TransformPosition(v.pos, NoBindFix);
                     v.nrm = Vector3.TransformNormal(v.nrm, NoBindFix);
+                    v.tan.Xyz = Vector3.TransformNormal(v.tan.Xyz, NoBindFix);
+                    v.bitan.Xyz = Vector3.TransformNormal(v.bitan.Xyz, NoBindFix);
                 }
                 fshp.vertices.Add(v);
             }
@@ -544,6 +613,9 @@ namespace FirstPlugin
                 BfresBone STBone = new BfresBone(RenderableSkeleton);
                 ReadBone(STBone, bone);
                 RenderableSkeleton.bones.Add(STBone);
+
+                if (skeleton.FlagsScaling == SkeletonFlagsScaling.Maya)
+                    STBone.UseSegmentScaleCompensate = true;
             }
 
             skl.Nodes.Clear();
@@ -564,8 +636,6 @@ namespace FirstPlugin
             bone.Text = bn.Name;
             bone.RigidMatrixIndex = bn.RigidMatrixIndex;
             bone.SmoothMatrixIndex = bn.SmoothMatrixIndex;
-            bone.UseRigidMatrix = bn.RigidMatrixIndex != -1;
-            bone.UseSmoothMatrix = bn.SmoothMatrixIndex != -1;
 
             bone.BillboardIndex = bn.BillboardIndex;
             if (SetParent)
@@ -594,7 +664,6 @@ namespace FirstPlugin
         public static void SaveSkeleton(FSKL fskl, List<STBone> Bones)
         {
             fskl.node.Skeleton.Bones.Clear();
-            fskl.node.Skeleton.MatrixToBoneList = new List<ushort>();
             fskl.node.Skeleton.InverseModelMatrices = new List<Syroot.Maths.Matrix3x4>();
 
             ushort SmoothIndex = 0;
@@ -606,17 +675,11 @@ namespace FirstPlugin
                 BfresBone bn = new BfresBone(fskl);
                 bn.CloneBaseInstance(genericBone);
                 bn.Text = genericBone.Text;
-                bn.UseRigidMatrix = bn.RigidMatrixIndex != -1;
-                bn.UseSmoothMatrix = bn.SmoothMatrixIndex != -1;
-
+   
                 //Set the bfres bone data
                 if (bn.Bone == null)
                     bn.Bone = new Bone();
                 bn.GenericToBfresBone();
-
-                if (bn.SmoothMatrixIndex != short.MaxValue)
-                    fskl.node.Skeleton.MatrixToBoneList.Add(SmoothIndex++);
-
                 fskl.node.Skeleton.InverseModelMatrices.Add(Syroot.Maths.Matrix3x4.Zero);
 
                 //Check duplicated names
@@ -636,14 +699,6 @@ namespace FirstPlugin
 
             fskl.update();
             fskl.reset();
-
-            fskl.Node_Array = new int[fskl.node.Skeleton.MatrixToBoneList.Count];
-            int nodes = 0;
-            foreach (ushort node in fskl.node.Skeleton.MatrixToBoneList)
-            {
-                fskl.Node_Array[nodes] = node;
-                nodes++;
-            }
         }
 
         public static void SetShape(this FSHP s, Shape shp)
@@ -739,64 +794,10 @@ namespace FirstPlugin
 
                 bool IsAlbedo = Misc.HackyTextureList.Any(TextureName.Contains);
 
-                //A bit hacky, just use the same samplers for mk8 for nsmbudx
-                if (mat.ShaderAssign.ShaderArchiveName == "Wii_UBER" || mat.ShaderAssign.ShaderArchiveName == "Block_UBER")
-                    Runtime.activeGame = Runtime.ActiveGame.MK8D;
+                //Kirby star allies uses _#### ubder shaders. The game's sampler system is very picky!
+                bool isKirbyStarAllies = mat.ShaderAssign.ShaderArchiveName.StartsWith("_");
 
-                if (mat.ShaderAssign.ShaderArchiveName == "base" || mat.ShaderAssign.ShaderArchiveName == "ui" || mat.ShaderAssign.ShaderArchiveName == "chara") {
-                    Runtime.activeGame = Runtime.ActiveGame.MK8D;
-                }
-
-                if (Runtime.activeGame == Runtime.ActiveGame.MK8D)
-                {
-                    if (useSampler == "_a0" && AlbedoCount == 0)
-                    {
-                        m.HasDiffuseMap = true;
-                        AlbedoCount++;
-                        texture.Type = MatTexture.TextureType.Diffuse;
-                    }
-                    else if (useSampler == "_a1")
-                    {
-                        m.HasDiffuseLayer = true;
-                        texture.Type = MatTexture.TextureType.DiffuseLayer2;
-                    }
-                    else if (useSampler == "_n0")
-                    {
-                        m.HasNormalMap = true;
-                        texture.Type = MatTexture.TextureType.Normal;
-                    }
-                    else if (useSampler == "_e0")
-                    {
-                        m.HasEmissionMap = true;
-                        texture.Type = MatTexture.TextureType.Emission;
-                    }
-                    else if (texture.SamplerName == "_s0" || useSampler == "_s0")
-                    {
-                        m.HasSpecularMap = true;
-                        texture.Type = MatTexture.TextureType.Specular;
-                    }
-                    else if (useSampler == "_x0" && TextureName.Contains("Mlt"))
-                    {
-                        m.HasSphereMap = true;
-                        texture.Type = MatTexture.TextureType.SphereMap;
-                    }
-                    else if (useSampler == "_b0")
-                    {
-                        m.HasShadowMap = true;
-                        texture.Type = MatTexture.TextureType.Shadow;
-                    }
-                    else if (useSampler == "_b1")
-                    {
-                        m.HasLightMap = true;
-                        texture.Type = MatTexture.TextureType.Light;
-                    }
-                    else if (texture.SamplerName == "bake0")
-                    {
-                        m.HasShadowMap = true;
-                        texture.Type = MatTexture.TextureType.Shadow;
-                    }
-                }
-                else if (Runtime.activeGame == Runtime.ActiveGame.BOTW) {
+                 if (Runtime.activeGame == Runtime.ActiveGame.BOTW) {
                     if (useSampler == "_a0")
                     {
                         m.HasDiffuseMap = true;
@@ -826,7 +827,28 @@ namespace FirstPlugin
                     {
                       
                     }
-                 }
+                    // EOW Samplers
+                    else if (useSampler == "_albedo0")
+                    {
+                        m.HasDiffuseMap = true;
+                        texture.Type = MatTexture.TextureType.Diffuse;
+                    }
+                    else if (useSampler == "_metallic0")
+                    {
+                        m.HasMetalnessMap = true;
+                        texture.Type = MatTexture.TextureType.Metalness;
+                    }
+                    else if (useSampler == "_normal0")
+                    {
+                        m.HasNormalMap = true;
+                        texture.Type = MatTexture.TextureType.Normal;
+                    }
+                    else if (useSampler == "_smoothness0")
+                    {
+                        m.HasLightMap = true;
+                        texture.Type = MatTexture.TextureType.Light;
+                    }
+                }
                 else if (mat.ShaderAssign.ShaderArchiveName == "ssg" ||
                          mat.ShaderAssign.ShaderArchiveName == "rf4cmv")
                 {
@@ -968,7 +990,7 @@ namespace FirstPlugin
                         m.HasRoughnessMap = true;
                     }
                 }
-                else
+                else if (isKirbyStarAllies)
                 {
                     //This works decently for now. I tried samplers but Kirby Star Allies doesn't map with samplers properly? 
                     if (IsAlbedo)
@@ -1047,6 +1069,82 @@ namespace FirstPlugin
                         m.HasSubSurfaceScatteringMap = true;
                     }
                 }
+                else
+                {
+                    if (useSampler == "_a0" && AlbedoCount == 0)
+                    {
+                        m.HasDiffuseMap = true;
+                        AlbedoCount++;
+                        texture.Type = MatTexture.TextureType.Diffuse;
+                    }
+                    else if (useSampler == "_a1")
+                    {
+                        m.HasDiffuseLayer = true;
+                        texture.Type = MatTexture.TextureType.DiffuseLayer2;
+                    }
+                    else if (useSampler == "_n0")
+                    {
+                        m.HasNormalMap = true;
+                        texture.Type = MatTexture.TextureType.Normal;
+                    }
+                    else if (useSampler == "_e0")
+                    {
+                        m.HasEmissionMap = true;
+                        texture.Type = MatTexture.TextureType.Emission;
+                    }
+                    else if (texture.SamplerName == "_s0" || useSampler == "_s0")
+                    {
+                        m.HasSpecularMap = true;
+                        texture.Type = MatTexture.TextureType.Specular;
+                    }
+                    else if (useSampler == "_x0" && TextureName.Contains("Mlt"))
+                    {
+                        m.HasSphereMap = true;
+                        texture.Type = MatTexture.TextureType.SphereMap;
+                    }
+                    else if (useSampler == "_b0")
+                    {
+                        m.HasShadowMap = true;
+                        texture.Type = MatTexture.TextureType.Shadow;
+                    }
+                    else if (useSampler == "_b1")
+                    {
+                        m.HasLightMap = true;
+                        texture.Type = MatTexture.TextureType.Light;
+                    }
+                    else if (texture.SamplerName == "bake0")
+                    {
+                        m.HasShadowMap = true;
+                        texture.Type = MatTexture.TextureType.Shadow;
+                    }       // EOW Frag Samplers
+
+                    else if (useSampler == "Albedo0")
+                    {
+                        m.HasDiffuseLayer = true;
+                        texture.Type = MatTexture.TextureType.Diffuse;
+                    }
+                    else if (useSampler == "Normal0")
+                    {
+                        m.HasNormalMap = true;
+                        texture.Type = MatTexture.TextureType.Normal;
+                    }
+                    else if (useSampler == "Emissive1")
+                    {
+                        m.HasEmissionMap = true;
+                        texture.Type = MatTexture.TextureType.Emission;
+                    }
+                    else if (useSampler == "Smoothness0")
+                    {
+                        m.HasLightMap = true;
+                        texture.Type = MatTexture.TextureType.Light;
+                    }
+                    else if (useSampler == "Metalness0")
+                    {
+                        m.HasMetalnessMap = true;
+                        texture.Type = MatTexture.TextureType.Metalness;
+                    }
+                }
+
                 texture.Name = TextureName;
 
                 texture.textureUnit = textureUnit++;

@@ -39,6 +39,9 @@
             this.btnLeftArray = new Toolbox.Library.Forms.STButton();
             this.pbRightFace = new Toolbox.Library.Forms.PictureBoxCustom();
             this.chkDisplayAlpha = new Toolbox.Library.Forms.STCheckBox();
+            this.displayEncodedHDRAlphaChk = new Toolbox.Library.Forms.STCheckBox();
+            this.gammaUD = new Toolbox.Library.Forms.NumericUpDownFloat();
+            this.stLabel1 = new Toolbox.Library.Forms.STLabel();
             this.contentContainer.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbTopFace)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbFrontFace)).BeginInit();
@@ -46,11 +49,15 @@
             ((System.ComponentModel.ISupportInitialize)(this.pbBottomFace)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbBackFace)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbRightFace)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.gammaUD)).BeginInit();
             this.SuspendLayout();
             // 
             // contentContainer
             // 
             this.contentContainer.BackColor = System.Drawing.Color.White;
+            this.contentContainer.Controls.Add(this.stLabel1);
+            this.contentContainer.Controls.Add(this.gammaUD);
+            this.contentContainer.Controls.Add(this.displayEncodedHDRAlphaChk);
             this.contentContainer.Controls.Add(this.chkDisplayAlpha);
             this.contentContainer.Controls.Add(this.arrayLevelCounterLabel);
             this.contentContainer.Controls.Add(this.btnRightArray);
@@ -72,6 +79,9 @@
             this.contentContainer.Controls.SetChildIndex(this.btnRightArray, 0);
             this.contentContainer.Controls.SetChildIndex(this.arrayLevelCounterLabel, 0);
             this.contentContainer.Controls.SetChildIndex(this.chkDisplayAlpha, 0);
+            this.contentContainer.Controls.SetChildIndex(this.displayEncodedHDRAlphaChk, 0);
+            this.contentContainer.Controls.SetChildIndex(this.gammaUD, 0);
+            this.contentContainer.Controls.SetChildIndex(this.stLabel1, 0);
             // 
             // pbTopFace
             // 
@@ -182,6 +192,50 @@
             this.chkDisplayAlpha.UseVisualStyleBackColor = true;
             this.chkDisplayAlpha.CheckedChanged += new System.EventHandler(this.chkDisplayAlpha_CheckedChanged);
             // 
+            // displayEncodedHDRAlphaChk
+            // 
+            this.displayEncodedHDRAlphaChk.AutoSize = true;
+            this.displayEncodedHDRAlphaChk.Location = new System.Drawing.Point(421, 117);
+            this.displayEncodedHDRAlphaChk.Name = "displayEncodedHDRAlphaChk";
+            this.displayEncodedHDRAlphaChk.Size = new System.Drawing.Size(163, 17);
+            this.displayEncodedHDRAlphaChk.TabIndex = 22;
+            this.displayEncodedHDRAlphaChk.Text = "Display Encoded HDR Alpha";
+            this.displayEncodedHDRAlphaChk.UseVisualStyleBackColor = true;
+            this.displayEncodedHDRAlphaChk.CheckedChanged += new System.EventHandler(this.displayEncodedHDRAlphaChk_CheckedChanged);
+            // 
+            // gammaUD
+            // 
+            this.gammaUD.DecimalPlaces = 5;
+            this.gammaUD.Increment = new decimal(new int[] {
+            5,
+            0,
+            0,
+            196608});
+            this.gammaUD.Location = new System.Drawing.Point(480, 156);
+            this.gammaUD.Maximum = new decimal(new int[] {
+            1000000000,
+            0,
+            0,
+            0});
+            this.gammaUD.Minimum = new decimal(new int[] {
+            100000000,
+            0,
+            0,
+            -2147483648});
+            this.gammaUD.Name = "gammaUD";
+            this.gammaUD.Size = new System.Drawing.Size(120, 20);
+            this.gammaUD.TabIndex = 23;
+            this.gammaUD.ValueChanged += new System.EventHandler(this.gammaUD_ValueChanged);
+            // 
+            // stLabel1
+            // 
+            this.stLabel1.AutoSize = true;
+            this.stLabel1.Location = new System.Drawing.Point(418, 158);
+            this.stLabel1.Name = "stLabel1";
+            this.stLabel1.Size = new System.Drawing.Size(46, 13);
+            this.stLabel1.TabIndex = 24;
+            this.stLabel1.Text = "Gamma:";
+            // 
             // CubeMapFaceViewer
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -198,6 +252,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.pbBottomFace)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbBackFace)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbRightFace)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.gammaUD)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -214,5 +269,8 @@
         private STButton btnLeftArray;
         private PictureBoxCustom pbRightFace;
         private STCheckBox chkDisplayAlpha;
+        private STCheckBox displayEncodedHDRAlphaChk;
+        private NumericUpDownFloat gammaUD;
+        private STLabel stLabel1;
     }
 }

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>FirstPlugin</RootNamespace>
     <AssemblyName>FirstPlugin.Plg</AssemblyName>
-    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <NuGetPackageImportStamp>
@@ -50,10 +50,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Toolbox\Lib\BcresLibrary.dll</HintPath>
     </Reference>
-    <Reference Include="BezelEngineArchive_Lib">
-      <HintPath>..\Toolbox\Lib\BezelEngineArchive_Lib.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="BfshaLibrary, Version=1.2.3.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\Toolbox\Lib\BfshaLibrary.dll</HintPath>
@@ -89,9 +85,8 @@
       <HintPath>..\Toolbox\Lib\KclLibraryGUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="LibHac">
-      <HintPath>..\Toolbox\Lib\LibHac.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=5.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.5.0.0\lib\net461\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="NAudio">
@@ -172,20 +167,26 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Buffers">
-      <HintPath>.\System.Buffers.dll</HintPath>
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Memory">
-      <HintPath>.\System.Memory.dll</HintPath>
+    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
     </Reference>
     <Reference Include="System.Messaging" />
     <Reference Include="System.Numerics" />
-    <Reference Include="System.Runtime.CompilerServices.Unsafe">
-      <HintPath>.\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.0.0\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net461\System.ValueTuple.dll</HintPath>
       <Private>False</Private>
@@ -210,6 +211,9 @@
     <Reference Include="ZeldaLib">
       <HintPath>..\Toolbox\Lib\ZeldaLib.dll</HintPath>
     </Reference>
+    <Reference Include="ZstdSharp, Version=0.7.2.0, Culture=neutral, PublicKeyToken=8d151af33a4ad5cf, processorArchitecture=MSIL">
+      <HintPath>..\packages\ZstdSharp.Port.0.7.2\lib\net461\ZstdSharp.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Actors\BotwActorLoader.cs" />
@@ -217,14 +221,25 @@
     <Compile Include="FileFormats\AAMP\AAMP.cs" />
     <Compile Include="FileFormats\Archives\APAK.cs" />
     <Compile Include="FileFormats\Archives\ARC.cs" />
+    <Compile Include="FileFormats\Archives\BEA\ASST.cs" />
+    <Compile Include="FileFormats\Archives\BEA\BevelEngineArchive.cs" />
+    <Compile Include="FileFormats\Archives\BEA\DIC\ResDict.cs" />
+    <Compile Include="FileFormats\Archives\BEA\IO\BinaryDataReader.cs" />
+    <Compile Include="FileFormats\Archives\BEA\IO\BinaryDataWriter.cs" />
+    <Compile Include="FileFormats\Archives\BEA\IO\IResData.cs" />
+    <Compile Include="FileFormats\Archives\BEA\IO\SubStreamBea.cs" />
     <Compile Include="FileFormats\Archives\BNR.cs" />
     <Compile Include="FileFormats\Archives\DARC.cs" />
     <Compile Include="FileFormats\Archives\DAT_Bayonetta.cs" />
     <Compile Include="FileFormats\Archives\GFA.cs" />
     <Compile Include="FileFormats\Archives\LZS.cs" />
+    <Compile Include="FileFormats\Archives\PKG.cs" />
     <Compile Include="FileFormats\Archives\QuickAccess\QuickAccessFile.cs" />
     <Compile Include="FileFormats\Archives\QuickAccess\QuickAccessFolder.cs" />
     <Compile Include="FileFormats\Archives\TRB.cs" />
+    <Compile Include="FileFormats\Archives\RARC\RARC_Parser.cs" />
+    <Compile Include="FileFormats\Archives\TRPAK\Flatbuffers\TRPAK.cs" />
+    <Compile Include="FileFormats\Archives\TRPAK\TRPAK.cs" />
     <Compile Include="FileFormats\Archives\WTA.cs" />
     <Compile Include="FileFormats\Audio\BARS\BarsFile.cs" />
     <Compile Include="FileFormats\BCH\BCH.cs" />
@@ -239,17 +254,33 @@
     <Compile Include="FileFormats\BCH\Wrappers\SkeletalAnimation\H3DSkeletalAnimWrapper.cs" />
     <Compile Include="FileFormats\BCSV\BCSV.cs" />
     <Compile Include="FileFormats\BCSV\BCSVParse.cs" />
+    <Compile Include="FileFormats\BSMAT\BSMATMaterialFile.cs" />
+    <Compile Include="FileFormats\BSMAT\BSMAT.cs" />
+    <Compile Include="FileFormats\BSMAT\NoFormattingConverter.cs" />
     <Compile Include="FileFormats\Byaml\XmlByamlConverter.cs" />
     <Compile Include="FileFormats\Byaml\YamlByamlConverter.cs" />
+    <Compile Include="FileFormats\DKCTF\CCharacter.cs" />
+    <Compile Include="FileFormats\DKCTF\CModel.cs" />
+    <Compile Include="FileFormats\DKCTF\FileData\BufferHelper.cs" />
+    <Compile Include="FileFormats\DKCTF\FileData\CMDL.cs" />
+    <Compile Include="FileFormats\DKCTF\CTexture.cs" />
+    <Compile Include="FileFormats\DKCTF\FileData\PACK.cs" />
+    <Compile Include="FileFormats\DKCTF\FileData\CHAR.cs" />
+    <Compile Include="FileFormats\DKCTF\FileData\SKEL.cs" />
+    <Compile Include="FileFormats\DKCTF\FileData\TXTR.cs" />
+    <Compile Include="FileFormats\DKCTF\FileData\IOFileExtension.cs" />
+    <Compile Include="FileFormats\DKCTF\PakFileList.cs" />
     <Compile Include="FileFormats\Font\BXFNT\CMAP.cs" />
     <Compile Include="FileFormats\Font\BXFNT\FINF.cs" />
     <Compile Include="FileFormats\Font\BXFNT\FontKerningTable.cs" />
+    <Compile Include="FileFormats\Font\BXFNT\GLGR.cs" />
     <Compile Include="FileFormats\Font\BXFNT\Images\CtrImageBlock.cs" />
     <Compile Include="FileFormats\Font\BXFNT\CWDH.cs" />
     <Compile Include="FileFormats\Font\BXFNT\Images\Gx2ImageBlock.cs" />
     <Compile Include="FileFormats\Font\BXFNT\Images\RevImageBlock.cs" />
     <Compile Include="FileFormats\Font\BXFNT\TGLP.cs" />
     <Compile Include="FileFormats\Font\BXFNT\BxfntYamlConverter.cs" />
+    <Compile Include="FileFormats\Hashes\GFPAKHashCache.cs" />
     <Compile Include="FileFormats\HyruleWarriors\G1M\G1MCommon.cs" />
     <Compile Include="FileFormats\HyruleWarriors\G1M\NUNO.cs" />
     <Compile Include="FileFormats\HyruleWarriors\G1M\NUNV.cs" />
@@ -313,9 +344,22 @@
     <Compile Include="FileFormats\Layout\Rev\Panes\WND1.cs" />
     <Compile Include="FileFormats\Layout\Rev\Shaders\ShaderGenerator.cs" />
     <Compile Include="FileFormats\LM1\LM1_MDL.cs" />
+    <Compile Include="FileFormats\LUAC.cs" />
     <Compile Include="FileFormats\MarioParty\HSF.cs" />
+    <Compile Include="FileFormats\MeshCodec\MeshCodec.cs" />
+    <Compile Include="FileFormats\MeshCodec\MeshCodecFormat.cs" />
+    <Compile Include="FileFormats\MeshCodec\TexToGoFolder.cs" />
     <Compile Include="FileFormats\Message\MSYT.cs" />
     <Compile Include="FileFormats\MKAGPDX\LM2_ARCADE_Model.cs" />
+    <Compile Include="FileFormats\MT\CRC32Hash.cs" />
+    <Compile Include="FileFormats\MT\Model\MaterialList.cs" />
+    <Compile Include="FileFormats\MT\Model\Model.cs" />
+    <Compile Include="FileFormats\MT\Model\Shader.cs" />
+    <Compile Include="FileFormats\MT\MT_Globals.cs" />
+    <Compile Include="FileFormats\MT\MT_Renderer.cs" />
+    <Compile Include="FileFormats\MT\MT_Model.cs" />
+    <Compile Include="FileFormats\MT\MT_TEX.cs" />
+    <Compile Include="FileFormats\NKN.cs" />
     <Compile Include="FileFormats\NLG\LM2\LM2_Material.cs" />
     <Compile Include="FileFormats\NLG\LM3\LM3_ChunkTable.cs" />
     <Compile Include="FileFormats\NLG\LM3\LM3_DICT.cs" />
@@ -335,7 +379,7 @@
     <Compile Include="FileFormats\Archives\VIBS.cs" />
     <Compile Include="FileFormats\Audio\Archives\AudioCommon.cs" />
     <Compile Include="FileFormats\Collision\KclMonoscript.cs" />
-    <Compile Include="FileFormats\DKCTF\Common.cs" />
+    <Compile Include="FileFormats\DKCTF\FileData\Common.cs" />
     <Compile Include="FileFormats\DKCTF\MSBT.cs" />
     <Compile Include="FileFormats\DKCTF\PAK.cs" />
     <Compile Include="FileFormats\Effects\ESET.cs" />
@@ -361,7 +405,7 @@
     <Compile Include="FileFormats\Archives\ME01.cs" />
     <Compile Include="FileFormats\Archives\MKGPDX_PAC.cs" />
     <Compile Include="FileFormats\Archives\NXARC.cs" />
-    <Compile Include="FileFormats\Archives\RARC.cs" />
+    <Compile Include="FileFormats\Archives\RARC\RARC.cs" />
     <Compile Include="FileFormats\Archives\Sonic Racing\GameDataToc.cs" />
     <Compile Include="FileFormats\Archives\Sonic Racing\SPC.cs" />
     <Compile Include="FileFormats\Archives\Sonic Racing\SWU.cs" />
@@ -457,6 +501,7 @@
     <Compile Include="FileFormats\Pokemon\GFLX\GFBMDL\GFMDLStructs.cs" />
     <Compile Include="FileFormats\Pokemon\GFLX\GFBPMCATALOG\FlatBuffers\gfbpmcatalog.cs" />
     <Compile Include="FileFormats\Pokemon\GFLX\PokemonTable.cs" />
+    <Compile Include="FileFormats\Pokemon\Trinity\TRANM\TRANM.cs" />
     <Compile Include="FileFormats\Rom\3DS\NCSDStructs.cs" />
     <Compile Include="FileFormats\Rom\3DS\NCSD.cs" />
     <Compile Include="FileFormats\Rom\3DS\RomFS.cs" />
@@ -466,6 +511,7 @@
     <Compile Include="FileFormats\Shader\SHARC\SharcCommon.cs" />
     <Compile Include="FileFormats\Texture\CTPK.cs" />
     <Compile Include="FileFormats\Grezzo\CTXB.cs" />
+    <Compile Include="FileFormats\Texture\MTXT.cs" />
     <Compile Include="FileFormats\Texture\SIR0.cs" />
     <Compile Include="FileFormats\Texture\TPL\TPL_IO.cs" />
     <Compile Include="FileFormats\Texture\TVOL.cs" />
@@ -940,8 +986,6 @@
     <Compile Include="FileFormats\GMX\GMX.cs" />
     <Compile Include="FileFormats\Hashes\SAHT.cs" />
     <Compile Include="FileFormats\MKAGPDX\MKAGPDX_Model.cs" />
-    <Compile Include="FileFormats\Rom\IStorage.cs" />
-    <Compile Include="FileFormats\Rom\RomfsNodeWrapper.cs" />
     <Compile Include="FileFormats\Shader\NSWShaderDecompile.cs" />
     <Compile Include="FileFormats\Shader\NUSHDB.cs" />
     <Compile Include="FileFormats\Shader\NVNSH.cs" />
@@ -1067,12 +1111,6 @@
     </Compile>
     <Compile Include="GUI\Editors\PTCL\EmitterEditorNX.Designer.cs">
       <DependentUpon>EmitterEditorNX.cs</DependentUpon>
-    </Compile>
-    <Compile Include="GUI\Rom\SwitchKeySelectionForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\Rom\SwitchKeySelectionForm.Designer.cs">
-      <DependentUpon>SwitchKeySelectionForm.cs</DependentUpon>
     </Compile>
     <Compile Include="GUI\TextureUI\Importers\BNTX\BinaryTextureImporterList.cs">
       <SubType>Form</SubType>
@@ -1515,8 +1553,6 @@
     <Compile Include="FileFormats\Archives\GFPAK.cs" />
     <Compile Include="FileFormats\Collision\KCL.cs" />
     <Compile Include="FileFormats\Message\MSBT.cs" />
-    <Compile Include="FileFormats\Rom\NCA.cs" />
-    <Compile Include="FileFormats\Rom\NSP.cs" />
     <Compile Include="FileFormats\Effects\PCTL.cs" />
     <Compile Include="FileFormats\Archives\SARC.cs" />
     <Compile Include="FileFormats\Shader\SHARC\SHARC.cs" />
@@ -1527,7 +1563,7 @@
     <Compile Include="FileFormats\Texture\NUTEXB.cs" />
     <Compile Include="FileFormats\Texture\TexConv.cs" />
     <Compile Include="FileFormats\Texture\XTX.cs" />
-    <Compile Include="FileFormats\Rom\XCI.cs" />
+    <Compile Include="FileFormats\Texture\TXTG.cs" />
     <Compile Include="GetSwitchKeys.cs" />
     <Compile Include="GL\BFRES\BFRES_Render.cs" />
     <Compile Include="GUI\Advanced Editor\TextureViewer.cs">
@@ -1603,10 +1639,6 @@
       <DependentUpon>VisibiltyAnimEditor.cs</DependentUpon>
     </Compile>
     <Compile Include="GUI\FormLoader.cs" />
-    <Compile Include="GUI\KeySelection.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\KeySelection.Designer.cs" />
     <Compile Include="GUI\TextureLoader.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -2137,7 +2169,6 @@
     <EmbeddedResource Include="GUI\Editors\VisibiltyAnimEditor.resx">
       <DependentUpon>VisibiltyAnimEditor.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="GUI\KeySelection.resx" />
     <EmbeddedResource Include="GUI\Byaml\ByamlEditor.resx">
       <DependentUpon>ByamlEditor.cs</DependentUpon>
     </EmbeddedResource>
@@ -2158,9 +2189,6 @@
     </EmbeddedResource>
     <EmbeddedResource Include="GUI\BFRES\Materials\Texture Selector.resx">
       <DependentUpon>Texture Selector.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="GUI\Rom\SwitchKeySelectionForm.resx">
-      <DependentUpon>SwitchKeySelectionForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="GUI\SMO\OdysseyCostumeLoader.resx">
       <DependentUpon>OdysseyCostumeLoader.cs</DependentUpon>
@@ -2187,7 +2215,6 @@
     <ProjectReference Include="..\BrawlboxHelper\BrawlboxHelper.csproj">
       <Project>{fa690685-3370-44d5-b138-f538c8d4c2a3}</Project>
       <Name>BrawlboxHelper</Name>
-      <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\Switch_Toolbox_Library\Toolbox_Library.csproj">
       <Project>{96820047-2a39-4e5a-bfa4-e84fff5c66cf}</Project>
@@ -2260,6 +2287,7 @@
     <Folder Include="FileFormats\NLG\Common\" />
     <Folder Include="FileFormats\Pokemon\GFL2\" />
     <Folder Include="GUI\Byaml\MuuntEditor\Renderables\" />
+    <Folder Include="GUI\Rom\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\ArrowIcon.png" />
@@ -2304,6 +2332,7 @@
     <None Include="Resources\Hashes\LM3_Hashes.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\Hashes\MetroidDread.txt" />
     <Content Include="Resources\Hashes\Pkmn.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -137,7 +137,10 @@ namespace Toolbox.Library
 
             if (ofd.ShowDialog() == DialogResult.OK)
             {
-                FileData = File.ReadAllBytes(ofd.FileName);
+                if (FileDataStream != null)
+                    FileDataStream = new MemoryStream(File.ReadAllBytes(ofd.FileName));
+                else
+                    FileData = File.ReadAllBytes(ofd.FileName);
                 return true;
             }
             return false;
@@ -174,7 +177,7 @@ namespace Toolbox.Library
         private string _fileName = string.Empty;
 
         [Browsable(false)]
-        public string FileName
+        public virtual string FileName
         {
             get
             {
@@ -363,7 +366,10 @@ namespace Toolbox.Library
             {
                 string NewName = SetFullPath(FileNodes[i].Item2, this);
                 if (NewName != string.Empty)
+                {
+                    FileNodes[i].Item1.Name = FileNodes[i].Item2.Text;
                     FileNodes[i].Item1.FileName = NewName;
+                }
             }
         }
 
@@ -548,6 +554,7 @@ namespace Toolbox.Library
                 if (node is IDirectoryContainer)
                 {
                     var folder = new ArchiveFolderNodeWrapper(node.Name, archiveFile, this);
+                    folder.DirectoryContainer = (IDirectoryContainer)node;
                     parent.Nodes.Add(folder);
 
                     if (((IDirectoryContainer)node).Nodes != null)
@@ -641,6 +648,8 @@ namespace Toolbox.Library
         public ArchiveRootNodeWrapper RootNode;
 
         public virtual object PropertyDisplay { get; set; }
+
+        public IDirectoryContainer DirectoryContainer { get; set; }
 
         public bool CanReplace
         {
@@ -758,6 +767,8 @@ namespace Toolbox.Library
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 Text = dialog.textBox1.Text;
+                if (DirectoryContainer != null)
+                    DirectoryContainer.Name = Text;
             }
         }
 
@@ -774,7 +785,18 @@ namespace Toolbox.Library
 
                 Nodes.Clear();
 
-                TreeHelper.AddFiles(this, RootNode, Directory.GetFiles(ofd.SelectedPath));
+                var proccessedFiles = TreeHelper.ReadFiles(ofd.SelectedPath);
+
+                string folderPath = TreeHelper.GetFolderAbsoultePath(this, RootNode);
+                for (int i = 0; i < proccessedFiles.Count; i++)
+                {
+                    ArchiveFile.AddFile(new ArchiveFileInfo()
+                    {
+                        FileName = $"{folderPath}/{proccessedFiles[i].Item1}",
+                        FileData = File.ReadAllBytes(proccessedFiles[i].Item2),
+                    });
+                }
+                RootNode.FillTreeNodes();
             }
         }
 

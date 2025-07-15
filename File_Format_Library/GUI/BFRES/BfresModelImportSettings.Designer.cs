@@ -61,6 +61,9 @@
             this.chkBoxFlipUvsY = new Toolbox.Library.Forms.STCheckBox();
             this.chkBoxImportBones = new Toolbox.Library.Forms.STCheckBox();
             this.panel8 = new Toolbox.Library.Forms.STPanel();
+            this.stLabel4 = new Toolbox.Library.Forms.STLabel();
+            this.lodCountUD = new Toolbox.Library.Forms.NumericUpDownUint();
+            this.chkCreateDummyLODs = new Toolbox.Library.Forms.STCheckBox();
             this.stLabel3 = new Toolbox.Library.Forms.STLabel();
             this.gamePresetCB = new Toolbox.Library.Forms.STComboBox();
             this.chkResetColorParams = new Toolbox.Library.Forms.STCheckBox();
@@ -102,7 +105,7 @@
             this.stCheckBox1 = new Toolbox.Library.Forms.STCheckBox();
             this.chkMapOriginalMaterials = new Toolbox.Library.Forms.STCheckBox();
             this.ogSkinCountChkBox = new Toolbox.Library.Forms.STCheckBox();
-            this.chkCreateDummyLODs = new Toolbox.Library.Forms.STCheckBox();
+            this.combineUVs = new Toolbox.Library.Forms.STCheckBox();
             this.contentContainer.SuspendLayout();
             this.panel1.SuspendLayout();
             this.panel2.SuspendLayout();
@@ -112,6 +115,7 @@
             this.panel6.SuspendLayout();
             this.panel7.SuspendLayout();
             this.panel8.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.lodCountUD)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.panel9.SuspendLayout();
             this.tabControl1.SuspendLayout();
@@ -124,7 +128,7 @@
             // contentContainer
             // 
             this.contentContainer.Controls.Add(this.tabControl1);
-            this.contentContainer.Size = new System.Drawing.Size(541, 396);
+            this.contentContainer.Size = new System.Drawing.Size(541, 410);
             this.contentContainer.Controls.SetChildIndex(this.tabControl1, 0);
             // 
             // panel1
@@ -457,6 +461,9 @@
             // 
             // panel8
             // 
+            this.panel8.Controls.Add(this.combineUVs);
+            this.panel8.Controls.Add(this.stLabel4);
+            this.panel8.Controls.Add(this.lodCountUD);
             this.panel8.Controls.Add(this.chkCreateDummyLODs);
             this.panel8.Controls.Add(this.stLabel3);
             this.panel8.Controls.Add(this.gamePresetCB);
@@ -484,8 +491,39 @@
             this.panel8.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel8.Location = new System.Drawing.Point(3, 3);
             this.panel8.Name = "panel8";
-            this.panel8.Size = new System.Drawing.Size(524, 327);
+            this.panel8.Size = new System.Drawing.Size(524, 341);
             this.panel8.TabIndex = 11;
+            // 
+            // stLabel4
+            // 
+            this.stLabel4.AutoSize = true;
+            this.stLabel4.Location = new System.Drawing.Point(237, 291);
+            this.stLabel4.Name = "stLabel4";
+            this.stLabel4.Size = new System.Drawing.Size(63, 13);
+            this.stLabel4.TabIndex = 39;
+            this.stLabel4.Text = "LOD Count:";
+            // 
+            // lodCountUD
+            // 
+            this.lodCountUD.Location = new System.Drawing.Point(319, 289);
+            this.lodCountUD.Maximum = new decimal(new int[] {
+            2147483647,
+            0,
+            0,
+            0});
+            this.lodCountUD.Name = "lodCountUD";
+            this.lodCountUD.Size = new System.Drawing.Size(120, 20);
+            this.lodCountUD.TabIndex = 38;
+            // 
+            // chkCreateDummyLODs
+            // 
+            this.chkCreateDummyLODs.AutoSize = true;
+            this.chkCreateDummyLODs.Location = new System.Drawing.Point(240, 263);
+            this.chkCreateDummyLODs.Name = "chkCreateDummyLODs";
+            this.chkCreateDummyLODs.Size = new System.Drawing.Size(210, 17);
+            this.chkCreateDummyLODs.TabIndex = 37;
+            this.chkCreateDummyLODs.Text = "Create Dummy LODs (always first level)";
+            this.chkCreateDummyLODs.UseVisualStyleBackColor = true;
             // 
             // stLabel3
             // 
@@ -674,7 +712,7 @@
             this.button1.Cursor = System.Windows.Forms.Cursors.Default;
             this.button1.DialogResult = System.Windows.Forms.DialogResult.OK;
             this.button1.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            this.button1.Location = new System.Drawing.Point(446, 302);
+            this.button1.Location = new System.Drawing.Point(446, 318);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(75, 23);
             this.button1.TabIndex = 17;
@@ -780,7 +818,7 @@
             this.tabControl1.myBackColor = System.Drawing.Color.Empty;
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(538, 362);
+            this.tabControl1.Size = new System.Drawing.Size(538, 376);
             this.tabControl1.TabIndex = 18;
             // 
             // tabPage2
@@ -789,7 +827,7 @@
             this.tabPage2.Location = new System.Drawing.Point(4, 25);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(530, 333);
+            this.tabPage2.Size = new System.Drawing.Size(530, 347);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Model Settings";
             // 
@@ -944,19 +982,19 @@
             this.ogSkinCountChkBox.Text = "Keep Original Skin Count (can help crashes)";
             this.ogSkinCountChkBox.UseVisualStyleBackColor = true;
             // 
-            // chkCreateDummyLODs
+            // combineUVs
             // 
-            this.chkCreateDummyLODs.AutoSize = true;
-            this.chkCreateDummyLODs.Location = new System.Drawing.Point(240, 263);
-            this.chkCreateDummyLODs.Name = "chkCreateDummyLODs";
-            this.chkCreateDummyLODs.Size = new System.Drawing.Size(210, 17);
-            this.chkCreateDummyLODs.TabIndex = 37;
-            this.chkCreateDummyLODs.Text = "Create Dummy LODs (always first level)";
-            this.chkCreateDummyLODs.UseVisualStyleBackColor = true;
+            this.combineUVs.AutoSize = true;
+            this.combineUVs.Location = new System.Drawing.Point(414, 88);
+            this.combineUVs.Name = "combineUVs";
+            this.combineUVs.Size = new System.Drawing.Size(90, 17);
+            this.combineUVs.TabIndex = 40;
+            this.combineUVs.Text = "Combine UVs";
+            this.combineUVs.UseVisualStyleBackColor = true;
             // 
             // BfresModelImportSettings
             // 
-            this.ClientSize = new System.Drawing.Size(547, 398);
+            this.ClientSize = new System.Drawing.Size(547, 412);
             this.Name = "BfresModelImportSettings";
             this.Text = "Import Settings";
             this.Load += new System.EventHandler(this.BfresModelImportSettings_Load);
@@ -977,6 +1015,7 @@
             this.panel7.PerformLayout();
             this.panel8.ResumeLayout(false);
             this.panel8.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.lodCountUD)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.panel9.ResumeLayout(false);
             this.panel9.PerformLayout();
@@ -1067,5 +1106,8 @@
         private Toolbox.Library.Forms.STLabel stLabel3;
         private Toolbox.Library.Forms.STComboBox gamePresetCB;
         private Toolbox.Library.Forms.STCheckBox chkCreateDummyLODs;
+        private Toolbox.Library.Forms.STLabel stLabel4;
+        private Toolbox.Library.Forms.NumericUpDownUint lodCountUD;
+        private Toolbox.Library.Forms.STCheckBox combineUVs;
     }
 }

@@ -205,7 +205,7 @@ namespace FirstPlugin.Forms
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
                     if (IsBntx)
-                        ((TextureData)image).Replace(ofd.FileName, 0, (uint)ImageIndex, image.Format, ((TextureData)image).Texture.SurfaceDim);
+                        ((TextureData)image).Replace(ofd.FileName, 1, (uint)ImageIndex, image.Format, ((TextureData)image).Texture.SurfaceDim);
                     else
                         image.Replace(ofd.FileName);
                 }
@@ -293,8 +293,8 @@ namespace FirstPlugin.Forms
             {
                 for (int r = 0; r < (int)textureGlyph.RowCount; r++)
                 {
-                    int x = r * textureGlyph.CellWidth;
-                    int y = c * textureGlyph.CellHeight;
+                    int x = r * (textureGlyph.CellWidth + 1);
+                    int y = c * (textureGlyph.CellHeight + 1);
 
                     var rect = new Rectangle(x, y, textureGlyph.CellWidth, textureGlyph.CellHeight);
 

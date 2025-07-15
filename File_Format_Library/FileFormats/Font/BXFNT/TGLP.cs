@@ -32,7 +32,7 @@ namespace FirstPlugin
         public byte CellWidth { get; set; }
         public byte CellHeight { get; set; }
         public byte MaxCharWidth { get; set; }
-        public byte SheetCount { get; private set; }
+        public ushort SheetCount { get; private set; }
         public uint SheetSize { get; set; }
         public ushort BaseLinePos { get; set; }
         public ushort Format { get; set; }
@@ -53,7 +53,16 @@ namespace FirstPlugin
                 BaseLinePos = reader.ReadByte();
                 MaxCharWidth = reader.ReadByte();
                 SheetSize = reader.ReadUInt32();
-                SheetCount = (byte)reader.ReadUInt16();
+                SheetCount = reader.ReadUInt16();
+                if (header.Signature == "RFNA")
+                {
+                    reader.ReadByte(); // No clue what the value is for
+                    Format = reader.ReadByte();
+                }
+                else
+                {
+                    Format = reader.ReadUInt16();
+                }
             }
             else
             {
@@ -61,9 +70,9 @@ namespace FirstPlugin
                 MaxCharWidth = reader.ReadByte();
                 SheetSize = reader.ReadUInt32();
                 BaseLinePos = reader.ReadUInt16();
+                Format = reader.ReadUInt16();
             }
 
-            Format = reader.ReadUInt16();
             RowCount = reader.ReadUInt16();
             ColumnCount = reader.ReadUInt16();
             SheetWidth = reader.ReadUInt16();
@@ -74,7 +83,18 @@ namespace FirstPlugin
             {
                 for (int i = 0; i < SheetCount; i++)
                 {
-                    SheetDataList.Add(reader.ReadBytes((int)SheetSize));
+                    byte[] decompedData;
+                    uint compSheetSize = 0;
+                    if (header.Signature == "RFNA") // .brfna files have their texture sheets compressed with Huffman.
+                    {
+                        compSheetSize = reader.ReadUInt32();
+                        decompedData = Huffman_WII.DecompressHuffman(reader.ReadBytes((int)compSheetSize), (int)SheetSize);
+                    }
+                    else
+                    {
+                        decompedData = reader.ReadBytes((int)SheetSize);
+                    }
+                    SheetDataList.Add(decompedData);
                     if (SheetDataList[i].Length != SheetSize)
                         throw new Exception("SheetSize mis match!");
                 }
@@ -85,11 +105,23 @@ namespace FirstPlugin
         {
             long pos = writer.Position;
 
+            SheetSize = (uint)SheetDataList[0].Length;
+            SheetCount = (byte)SheetDataList.Count;
             if (BinaryTextureFile != null)
             {
                 var mem = new System.IO.MemoryStream();
                 BinaryTextureFile.Save(mem);
-                SheetDataList[0] = mem.ToArray();
+                var binaryFile = mem.ToArray();
+
+                SheetDataList.Clear();
+
+                SheetSize = (uint)(binaryFile.Length / SheetCount);
+
+                uint offset = 0;
+                for (int i = 0; i < SheetCount; i++) {
+                    SheetDataList.Add(Utils.SubArray(binaryFile, offset, SheetSize));
+                    offset += SheetSize;
+                }
             }
 
             writer.WriteSignature("TGLP");
@@ -100,14 +132,14 @@ namespace FirstPlugin
             {
                 writer.Write((byte)BaseLinePos);
                 writer.Write(MaxCharWidth);
-                writer.Write(SheetDataList[0].Length);
-                writer.Write((ushort)SheetDataList.Count);
+                writer.Write(SheetSize);
+                writer.Write((ushort)SheetCount);
             }
             else
             {
-                writer.Write((byte)SheetDataList.Count);
+                writer.Write((byte)SheetCount);
                 writer.Write(MaxCharWidth);
-                writer.Write(SheetDataList[0].Length);
+                writer.Write(SheetSize);
                 writer.Write(BaseLinePos);
             }
 

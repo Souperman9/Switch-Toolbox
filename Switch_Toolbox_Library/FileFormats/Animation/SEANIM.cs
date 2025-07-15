@@ -1,6 +1,7 @@
 ﻿using SELib;
 using OpenTK;
 using System.Linq;
+using System;
 
 namespace Toolbox.Library.Animations
 {
@@ -10,7 +11,7 @@ namespace Toolbox.Library.Animations
         {
             Animation anim = new Animation();
             var seanim = SEAnim.Read(FileName);
-            anim.FrameCount = seanim.FrameCount;
+            anim.FrameCount = seanim.FrameCount - 1;
             anim.CanLoop = seanim.Looping;
 
             foreach (var bone in seanim.Bones)
@@ -176,7 +177,7 @@ namespace Toolbox.Library.Animations
             seAnim.AnimType = AnimationType.Absolute;
 
             anim.SetFrame(0);
-            for (int frame = 0; frame < anim.FrameCount; frame++)
+            for (int frame = 0; frame < Math.Max(1, anim.FrameCount); frame++)
             {
                 anim.SetFrame(frame);
                 anim.NextFrame();
@@ -209,38 +210,12 @@ namespace Toolbox.Library.Animations
                 anim.NextFrame(skeleton);
             anim.NextFrame(skeleton);  //go on first frame
 
-            foreach (STBone b in skeleton.getBoneTreeOrder())
-            {
-                if (anim.HasBone(b.Text))
-                {
-                    Animation.KeyNode n = anim.GetBone(b.Text);
-                    if (n.XPOS.HasAnimation())
-                        WriteKey(n.XPOS);
-                    if (n.YPOS.HasAnimation())
-                        WriteKey(n.YPOS);
-                    if (n.ZPOS.HasAnimation())
-                        WriteKey(n.ZPOS);
-                    if (n.XROT.HasAnimation())
-                        WriteKey(n.XROT);
-                    if (n.YROT.HasAnimation())
-                        WriteKey(n.YROT);
-                    if (n.ZROT.HasAnimation())
-                        WriteKey(n.ZROT);
-                    if (n.XSCA.HasAnimation())
-                        WriteKey(n.XSCA);
-                    if (n.YSCA.HasAnimation())
-                        WriteKey(n.YSCA);
-                    if (n.ZSCA.HasAnimation())
-                        WriteKey(n.ZSCA);
-                }
-            }
-
             SEAnim seAnim = new SEAnim();
             seAnim.Looping = anim.CanLoop;
             seAnim.AnimType = AnimationType.Absolute;
             //Reset active animation to 0
             anim.SetFrame(0);
-            for (int frame = 0; frame < anim.FrameCount; frame++)
+            for (int frame = 0; frame <= anim.FrameCount; frame++)
             {
                 anim.NextFrame(skeleton, false, true);
 
@@ -254,20 +229,6 @@ namespace Toolbox.Library.Animations
                         Vector3 position = bone.GetPosition();
                         Quaternion rotation = bone.GetRotation();
                         Vector3 scale = bone.GetScale();
-
-                        //Exporting at specific keys doesn't work atm
-                        //Todo
-                        bool IsTranlationKeyed = (boneAnim.XPOS.GetKeyFrame(frame).IsKeyed ||
-                                                 boneAnim.YPOS.GetKeyFrame(frame).IsKeyed ||
-                                                 boneAnim.ZPOS.GetKeyFrame(frame).IsKeyed);
-
-                        bool IsRotationKeyed = (boneAnim.XROT.GetKeyFrame(frame).IsKeyed ||
-                                                  boneAnim.YROT.GetKeyFrame(frame).IsKeyed ||
-                                                  boneAnim.ZROT.GetKeyFrame(frame).IsKeyed);
-
-                        bool IsScaleKeyed = (boneAnim.XSCA.GetKeyFrame(frame).IsKeyed ||
-                                             boneAnim.YSCA.GetKeyFrame(frame).IsKeyed ||
-                                             boneAnim.ZSCA.GetKeyFrame(frame).IsKeyed);
 
                         seAnim.AddTranslationKey(boneAnim.Text, frame, position.X, position.Y, position.Z);
                         seAnim.AddRotationKey(boneAnim.Text, frame, rotation.X, rotation.Y, rotation.Z, rotation.W);

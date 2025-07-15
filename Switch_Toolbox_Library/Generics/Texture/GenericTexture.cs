@@ -10,6 +10,7 @@ using OpenTK.Graphics.OpenGL;
 using Toolbox.Library.Rendering;
 using Ryujinx.Graphics.Gal.Texture; //For ASTC
 using Toolbox.Library.NodeWrappers;
+using Toolbox.Library.Forms;
 
 namespace Toolbox.Library
 {
@@ -844,7 +845,7 @@ namespace Toolbox.Library
             {
                 if (IsAtscFormat(Format))
                 {
-                    return "Supported Formats|*.astc; *.png;*.tga;*.jpg;*.tiff|" +
+                    return "Supported Formats|*.dds; *.astc; *.png;*.tga;*.jpg;*.tiff|" +
                                 "ASTC |*.astc|" +
                                 "Portable Network Graphics |*.png|" +
                                 "Joint Photographic Experts Group |*.jpg|" +
@@ -867,7 +868,7 @@ namespace Toolbox.Library
 
         public override void Export(string FileName)
         {
-            Export(FileName);
+            Export(FileName, false, false, GetViewedArrayLevel(), GetViewedMipLevel());
         }
 
         public void ExportArrayImage(int ArrayIndex = 0)
@@ -883,6 +884,22 @@ namespace Toolbox.Library
             }
         }
 
+        private int GetViewedArrayLevel()
+        {
+            ImageEditorBase editor = (ImageEditorBase)LibraryGUI.GetActiveContent(typeof(ImageEditorBase));
+            if (editor != null)
+               return editor.GetArrayDisplayLevel();
+            return 0;
+        }
+
+        private int GetViewedMipLevel()
+        {
+            ImageEditorBase editor = (ImageEditorBase)LibraryGUI.GetActiveContent(typeof(ImageEditorBase));
+            if (editor != null)
+                return editor.GetMipmapDisplayLevel();
+            return 0;
+        }
+
         public void ExportImage()
         {
             SaveFileDialog sfd = new SaveFileDialog();
@@ -892,7 +909,7 @@ namespace Toolbox.Library
 
             if (sfd.ShowDialog() == DialogResult.OK)
             {
-                Export(sfd.FileName, false, false, 0, 0);
+                Export(sfd.FileName, false, false, GetViewedArrayLevel(), GetViewedMipLevel());
             }
         }
 
@@ -915,16 +932,11 @@ namespace Toolbox.Library
                     break;
             }
         }
-        public void SaveASTC(string FileName, bool ExportSurfaceLevel = false,
+        public void SaveASTC(string FileName, bool ExportSurfaceLevel = true,
             bool ExportMipMapLevel = false, int SurfaceLevel = 0, int MipLevel = 0)
         {
-            List<Surface> surfaces = null;
-            if (ExportSurfaceLevel)
-                surfaces = GetSurfaces(SurfaceLevel, false);
-            else if (Depth > 1)
-                surfaces = Get3DSurfaces();
-            else
-                surfaces = GetSurfaces();
+            List<Surface> surfaces = GetSurfaces(SurfaceLevel, false);
+
 
             ASTC atsc = new ASTC();
             atsc.Width = Width;
@@ -937,7 +949,10 @@ namespace Toolbox.Library
 
             Console.WriteLine("DataBlock " + atsc.DataBlock.Length);
 
-            atsc.Save(new FileStream(FileName, FileMode.Create, FileAccess.ReadWrite));
+            using (var fs = new FileStream(FileName, FileMode.Create, FileAccess.ReadWrite))
+            {
+                atsc.Save(fs);
+            }
         }
         public void SaveTGA(string FileName, bool ExportSurfaceLevel = false,
             bool ExportMipMapLevel = false, int SurfaceLevel = 0, int MipLevel = 0)
@@ -956,32 +971,25 @@ namespace Toolbox.Library
 
             if (ArrayCount > 1 && !ExportSurfaceLevel)
             {
-                progressBar.Task = "Select dialog option... ";
+                string ext = Path.GetExtension(FileName);
 
-                var result = MessageBox.Show("Multiple image surfaces found! Would you like to export them all?", "Image Exporter",
-                    MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
-                if (result == DialogResult.Yes)
+                int index = FileName.LastIndexOf('.');
+                string name = index == -1 ? FileName : FileName.Substring(0, index);
+
+                for (int i = 0; i < ArrayCount; i++)
                 {
-                    string ext = Path.GetExtension(FileName);
+                    progressBar.Task = $"Decoding Surface [{i}] for image {Text}... ";
+                    progressBar.Value = (i * 100) / (int)ArrayCount;
+                    progressBar.Refresh();
 
-                    int index = FileName.LastIndexOf('.');
-                    string name = index == -1 ? FileName : FileName.Substring(0, index);
-
-                    for (int i = 0; i < ArrayCount; i++)
-                    {
-                        progressBar.Task = $"Decoding Surface [{i}] for image {Text}... ";
-                        progressBar.Value = (i * 100) / (int)ArrayCount;
-                        progressBar.Refresh();
-
-                        Bitmap arrayBitMap = GetBitmap(i, 0);
-                        arrayBitMap.Save($"{name}_Slice_{i}_{ext}");
-                        arrayBitMap.Dispose();
-                    }
-
-                    progressBar.Value = 100;
-                    progressBar.Close();
-                    return;
+                    Bitmap arrayBitMap = GetBitmap(i, 0);
+                    arrayBitMap.Save($"{name}_Slice_{i}_{ext}");
+                    arrayBitMap.Dispose();
                 }
+
+                progressBar.Value = 100;
+                progressBar.Close();
+                return;
             }
 
             progressBar.Task = $"Decoding image {Text}... ";

@@ -1388,7 +1388,6 @@ namespace FirstPlugin
                 case SurfaceFormat.B8_G8_R8_A8_UNORM: return TEX_FORMAT.B8G8R8A8_UNORM;
                 case SurfaceFormat.R10_G10_B10_A2_UNORM: return TEX_FORMAT.R10G10B10A2_UNORM;
                 case SurfaceFormat.R11_G11_B10_UINT: return TEX_FORMAT.R11G11B10_FLOAT;
-                case SurfaceFormat.R16_UNORM: return TEX_FORMAT.R16_UNORM;
                 case SurfaceFormat.R4_G4_B4_A4_UNORM: return TEX_FORMAT.B4G4R4A4_UNORM;
                 case SurfaceFormat.R4_G4_UNORM: return TEX_FORMAT.B4G4R4A4_UNORM;
                 case SurfaceFormat.R5_G5_B5_A1_UNORM: return TEX_FORMAT.R5G5B5A1_UNORM;
@@ -1397,7 +1396,11 @@ namespace FirstPlugin
                 case SurfaceFormat.R8_G8_B8_A8_UNORM: return TEX_FORMAT.R8G8B8A8_UNORM;
                 case SurfaceFormat.R8_G8_B8_A8_SNORM: return TEX_FORMAT.R8G8B8A8_SNORM;
                 case SurfaceFormat.R8_UNORM: return TEX_FORMAT.R8_UNORM;
+                case SurfaceFormat.R16_UNORM: return TEX_FORMAT.R16_UNORM;
+                case SurfaceFormat.R16_SNORM: return TEX_FORMAT.R16_SNORM;
                 case SurfaceFormat.R16_UINT: return TEX_FORMAT.R16_UINT;
+                case SurfaceFormat.R16_SINT: return TEX_FORMAT.R16_SINT;
+                case SurfaceFormat.R16_FLOAT: return TEX_FORMAT.R16_FLOAT;
                 case SurfaceFormat.R8_G8_UNORM: return TEX_FORMAT.R8G8_UNORM;
                 case SurfaceFormat.R8_G8_SNORM: return TEX_FORMAT.R8G8_SNORM;
                 case SurfaceFormat.ETC1_UNORM: return TEX_FORMAT.ETC1_UNORM;
@@ -1434,7 +1437,10 @@ namespace FirstPlugin
 
                 case SurfaceFormat.Invalid: throw new Exception("Invalid Format");
                 default:
-                    throw new Exception($"Cannot convert format {surfaceFormat}");
+                //Unsupported, skip for now
+                     return TEX_FORMAT.R8G8B8A8_UNORM;
+
+                    //    throw new Exception($"Cannot convert format {surfaceFormat}");
             }
         }
         public override void OnClick(TreeView treeView)
@@ -1534,7 +1540,9 @@ namespace FirstPlugin
 
         //Max mip level will be set automatically unless overwritten
         //The tex format can be adjusted in the function if necessary. Will normally be set to format in settings
-        public void Replace(string FileName, uint MaxMipLevel = 0, uint ArrayIndex = 0, TEX_FORMAT DefaultFormat = TEX_FORMAT.BC1_UNORM_SRGB, SurfaceDim surfaceDim = SurfaceDim.Dim2D) 
+        public void Replace(string FileName, uint MaxMipLevel = 0, uint ArrayIndex = 0,
+            TEX_FORMAT DefaultFormat = TEX_FORMAT.BC1_UNORM_SRGB, SurfaceDim surfaceDim = SurfaceDim.Dim2D,
+            int alignment = 512) 
         {
             Console.WriteLine("surfaceDim" + surfaceDim);
 
@@ -1545,6 +1553,9 @@ namespace FirstPlugin
             BinaryTextureImporterList importer = new BinaryTextureImporterList();
 
             setting.SurfaceDim = surfaceDim;
+            setting.Alignment = alignment;
+            //Check if alignment is required for combining individual levels or not
+            setting.CombineMipLevel = alignment != 0 ? true : false;
 
             var ImageDataCached = new List<List<byte[]>>();
             if (Texture != null && Texture.TextureData != null)
@@ -1552,6 +1563,9 @@ namespace FirstPlugin
                 foreach (var sliceData in Texture.TextureData)
                     ImageDataCached.Add(sliceData);
             }
+
+            //Check if current texture is SRGB
+            bool srgb = Texture != null && Texture.UseSRGB; 
 
             switch (ext)
             {
@@ -1566,7 +1580,8 @@ namespace FirstPlugin
                     break;
                 case ".astc":
                     setting.LoadASTC(FileName);
-                    ApplyImportSettings(setting, STCompressionMode.Normal, false);
+                    //Keep original SRGB setting as .astc has no SRGB flags
+                    ApplyImportSettings(setting, STCompressionMode.Normal, false, srgb);
                     break;
                 default:
                     setting.LoadBitMap(FileName);
@@ -1599,7 +1614,7 @@ namespace FirstPlugin
                     Texture.TextureData.Add(ImageDataCached[i]);
             }
         }
-        public void ApplyImportSettings(TextureImporterSettings setting,STCompressionMode CompressionMode, bool multiThread)
+        public void ApplyImportSettings(TextureImporterSettings setting,STCompressionMode CompressionMode, bool multiThread, bool force_srgb = false)
         {
             Cursor.Current = Cursors.WaitCursor;
 
@@ -1616,6 +1631,8 @@ namespace FirstPlugin
             }
 
             tex.Name = Text;
+            if (force_srgb)
+                tex.UseSRGB = true;
 
             Texture = tex;
             Load(tex);

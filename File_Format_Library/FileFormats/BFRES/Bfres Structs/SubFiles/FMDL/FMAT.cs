@@ -89,24 +89,27 @@ namespace Bfres.Structs
 
         }
     }
-    public class FMAT : STGenericMaterial
+    public class FMAT : STGenericMaterial, IContextMenuNode
     {
         public FMAT()
         {
             Checked = true;
             ImageKey = "material";
             SelectedImageKey = "material";
+        }
 
-            ContextMenuStrip = new STContextMenuStrip();
+        public ToolStripItem[] GetContextMenuItems()
+        {
+            List<ToolStripItem> Items = new List<ToolStripItem>();
+            Items.Add(new ToolStripMenuItem("Export", null, ExportAction, Keys.Control | Keys.E));
+            Items.Add(new ToolStripMenuItem("Replace", null, ReplaceAction, Keys.Control | Keys.R));
+            Items.Add(new ToolStripSeparator());
+            Items.Add(new ToolStripMenuItem("Copy", null, CopyAction, Keys.Control | Keys.C));
+            Items.Add(new ToolStripMenuItem("Rename", null, RenameAction, Keys.Control | Keys.N));
+            Items.Add(new ToolStripSeparator());
+            Items.Add(new ToolStripMenuItem("Delete", null, DeleteAction, Keys.Control | Keys.Delete));
 
-            ContextMenuStrip.Items.Add(new ToolStripMenuItem("Export", null, ExportAction, Keys.Control | Keys.E));
-            ContextMenuStrip.Items.Add(new ToolStripMenuItem("Replace", null, ReplaceAction, Keys.Control | Keys.R));
-
-            ContextMenuStrip.Items.Add(new ToolStripSeparator());
-            ContextMenuStrip.Items.Add(new ToolStripMenuItem("Copy", null, CopyAction, Keys.Control | Keys.C));
-            ContextMenuStrip.Items.Add(new ToolStripMenuItem("Rename", null, RenameAction, Keys.Control | Keys.N));
-            ContextMenuStrip.Items.Add(new ToolStripSeparator());
-            ContextMenuStrip.Items.Add(new ToolStripMenuItem("Delete", null, DeleteAction, Keys.Control | Keys.N));
+            return Items.ToArray();
         }
 
         protected void ExportAction(object sender, EventArgs args) { Export(); }
@@ -258,23 +261,32 @@ namespace Bfres.Structs
             }
         }
 
-        public bool IsNormalMapTexCoord2()
+        public int GetNormalMapUVIndex()
         {
             //for BOTW if it uses UV layer 2 for normal maps use second UV map
             if (shaderassign.options.ContainsKey("uking_texture2_texcoord"))
             {
                 float value = float.Parse(shaderassign.options["uking_texture2_texcoord"]);
-                return (value == 1);
+                return (int)value;
+            }
+
+            //for TOTK use o_texture2_texcoord to find required uv layer for tangents
+            if (shaderassign.options.ContainsKey("o_texture2_texcoord"))
+            {
+                return int.TryParse(shaderassign.options["o_texture2_texcoord"], out int UseUVIndex) ? UseUVIndex : 0;
             }
 
             //For 3D world
             if (shaderassign.options.ContainsKey("cIsEnableNormalMap"))
             {
                 float value = float.Parse(shaderassign.options["cIsEnableNormalMap"]);
-                return (value == 1);
+                if (value == 1)
+                {
+                    return 1;
+                }
             }
 
-            return false;
+            return 0;
         }
 
         public void SetActiveGame()

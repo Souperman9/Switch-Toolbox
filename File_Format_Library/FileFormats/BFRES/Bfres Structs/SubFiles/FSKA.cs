@@ -11,6 +11,7 @@ using Toolbox.Library.Animations;
 using Toolbox.Library.Forms;
 using SELib;
 using FirstPlugin.Forms;
+using static Toolbox.Library.Animations.Animation;
 
 namespace Bfres.Structs
 {
@@ -177,85 +178,79 @@ namespace Bfres.Structs
                     SkeletalAnim.Export(FileName, GetResFile());
                 }
             }
-            else if (ext == ".chr0")
-            {
-                STSkeleton skeleton = GetActiveSkeleton();
-
-                if (SkeletalAnimU != null)
-                    BrawlboxHelper.FSKAConverter.Fska2Chr0(BfresPlatformConverter.FSKAConvertWiiUToSwitch(SkeletalAnimU), FileName);
-                else
-                    BrawlboxHelper.FSKAConverter.Fska2Chr0(SkeletalAnim, FileName);
-            }
-            else if (ext == ".smd")
-            {
-                STSkeleton skeleton = GetActiveSkeleton();
-
-                if (skeleton != null)
-                    SMD.Save(this, skeleton, FileName);
-                else
-                    throw new Exception("No skeleton found to assign!");
-            }
-            else if (ext == ".anim")
-            {
-                STSkeleton skeleton = GetActiveSkeleton();
-
-                if (skeleton != null)
-                    ANIM.CreateANIM(FileName, this, skeleton);
-                else
-                    throw new Exception("No skeleton found to assign!");
-            }
-            else if (ext == ".seanim")
-            {
-                STSkeleton skeleton = GetActiveSkeleton();
-
-                if (skeleton != null)
-                    SEANIM.SaveAnimation(FileName, this, skeleton);
-                else
-                    throw new Exception("No skeleton found to assign!");
-            }
             else if (ext == ".json")
             {
                 if (SkeletalAnimU != null)
-                   System.IO.File.WriteAllText(FileName, Newtonsoft.Json.JsonConvert.SerializeObject(SkeletalAnimU,
-                       Newtonsoft.Json.Formatting.Indented));
-                else
-                    System.IO.File.WriteAllText(FileName, Newtonsoft.Json.JsonConvert.SerializeObject(SkeletalAnim, 
+                    System.IO.File.WriteAllText(FileName, Newtonsoft.Json.JsonConvert.SerializeObject(SkeletalAnimU,
                         Newtonsoft.Json.Formatting.Indented));
+                else
+                    System.IO.File.WriteAllText(FileName, Newtonsoft.Json.JsonConvert.SerializeObject(SkeletalAnim,
+                        Newtonsoft.Json.Formatting.Indented));
+            }
+            else
+            {
+                STSkeleton skeleton = GetActiveSkeleton();
+                if (skeleton == null)
+                    throw new Exception("No skeleton found to assign! Make sure a model is open in the viewport.");
+
+                if (ext == ".chr0")
+                {
+                    if (SkeletalAnimU != null)
+                        BrawlboxHelper.FSKAConverter.Fska2Chr0(BfresPlatformConverter.FSKAConvertWiiUToSwitch(SkeletalAnimU), FileName);
+                    else
+                        BrawlboxHelper.FSKAConverter.Fska2Chr0(SkeletalAnim, FileName);
+                }
+                else if (ext == ".smd")
+                    SMD.Save(this, skeleton, FileName);
+                else if (ext == ".anim")
+                    ANIM.CreateANIM(FileName, this, skeleton);
+                else if (ext == ".seanim")
+                    SEANIM.SaveAnimation(FileName, this, skeleton);
             }
         }
 
         private STSkeleton GetActiveSkeleton()
         {
+            if (Parent == null)
+                return null;
+
+            //Check parent renderer and find skeleton
+            var render = ((BFRES)Parent.Parent.Parent).BFRESRender;
+            if (render != null)
+            {
+                //Return individual skeleton for single model files
+                if (render.models.Count == 1)
+                    return render.models[0].Skeleton;
+
+                //Search multiple FMDL to find matching bones
+                foreach (var model in render.models)
+                {
+                    //Check if all the bones in the animation are present in the skeleton
+                    bool areAllBonesPresent = model.Skeleton.bones.Count > 0;
+                    foreach (var bone in Bones)
+                    {
+                        var animBone = model.Skeleton.GetBone(bone.Text);
+
+                        if (animBone == null)
+                            areAllBonesPresent = false;
+                    }
+                    if (areAllBonesPresent)
+                        return model.Skeleton;
+                }
+
+                //If not all bones were present but models are present, use first model
+                if (render.models.Count > 0)
+                    return render.models[0].Skeleton;
+            }
+
+            //Search by viewport active model in the event the animation is externally loaded
             var viewport = LibraryGUI.GetActiveViewport();
             if (viewport != null)
             {
                 foreach (var drawable in viewport.scene.objects)
                 {
                     if (drawable is STSkeleton)
-                    {
-                        foreach (var bone in Bones)
-                        {
-                            var animBone = ((STSkeleton)drawable).GetBone(bone.Text);
-
-                            if (animBone != null)
-                                return (STSkeleton)drawable;
-                        }
-                    }
-                }
-            }
-
-            var render = ((BFRES)Parent.Parent.Parent).BFRESRender;
-            if (render.models.Count == 1)
-                return render.models[0].Skeleton;
-
-            foreach (var model in render.models)
-            {
-                foreach (var bone in Bones)
-                {
-                    var animBone = model.Skeleton.GetBone(bone.Text);
-
-                    if (animBone != null)
-                        return model.Skeleton;
+                        return ((STSkeleton)drawable);
                 }
             }
 
@@ -755,16 +750,16 @@ namespace Bfres.Structs
                     keyGroup.AnimDataOffset = bn.Curves[curve].AnimDataOffset;
                     switch (keyGroup.AnimDataOffset)
                     {
-                        case (int)TrackType.XPOS: bone.XPOS.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.YPOS: bone.YPOS.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.ZPOS: bone.ZPOS.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.XROT: bone.XROT.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.YROT: bone.YROT.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.ZROT: bone.ZROT.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.WROT: bone.WROT.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.XSCA: bone.XSCA.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.YSCA: bone.YSCA.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.ZSCA: bone.ZSCA.Keys.AddRange(keyGroup.Keys); break;
+                        case (int)TrackType.XPOS: bone.XPOS = keyGroup; break;
+                        case (int)TrackType.YPOS: bone.YPOS = keyGroup; break;
+                        case (int)TrackType.ZPOS: bone.ZPOS = keyGroup; break;
+                        case (int)TrackType.XROT: bone.XROT = keyGroup; break;
+                        case (int)TrackType.YROT: bone.YROT = keyGroup; break;
+                        case (int)TrackType.ZROT: bone.ZROT = keyGroup; break;
+                        case (int)TrackType.WROT: bone.WROT = keyGroup; break;
+                        case (int)TrackType.XSCA: bone.XSCA = keyGroup; break;
+                        case (int)TrackType.YSCA: bone.YSCA = keyGroup; break;
+                        case (int)TrackType.ZSCA: bone.ZSCA = keyGroup; break;
                         default: throw new Exception("Unknown Anim Offset " + keyGroup.AnimDataOffset);
                     }
                 }
@@ -818,16 +813,16 @@ namespace Bfres.Structs
                     keyGroup.AnimDataOffset = bn.Curves[curve].AnimDataOffset;
                     switch (keyGroup.AnimDataOffset)
                     {
-                        case (int)TrackType.XPOS: bone.XPOS.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.YPOS: bone.YPOS.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.ZPOS: bone.ZPOS.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.XROT: bone.XROT.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.YROT: bone.YROT.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.ZROT: bone.ZROT.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.WROT: bone.WROT.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.XSCA: bone.XSCA.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.YSCA: bone.YSCA.Keys.AddRange(keyGroup.Keys); break;
-                        case (int)TrackType.ZSCA: bone.ZSCA.Keys.AddRange(keyGroup.Keys); break;
+                        case (int)TrackType.XPOS: bone.XPOS = keyGroup; break;
+                        case (int)TrackType.YPOS: bone.YPOS = keyGroup; break;
+                        case (int)TrackType.ZPOS: bone.ZPOS = keyGroup; break;
+                        case (int)TrackType.XROT: bone.XROT = keyGroup; break;
+                        case (int)TrackType.YROT: bone.YROT = keyGroup; break;
+                        case (int)TrackType.ZROT: bone.ZROT = keyGroup; break;
+                        case (int)TrackType.WROT: bone.WROT = keyGroup; break;
+                        case (int)TrackType.XSCA: bone.XSCA = keyGroup; break;
+                        case (int)TrackType.YSCA: bone.YSCA = keyGroup; break;
+                        case (int)TrackType.ZSCA: bone.ZSCA = keyGroup; break;
                         default: throw new Exception("Unknown Anim Offset " + keyGroup.AnimDataOffset);
                     }
                 }

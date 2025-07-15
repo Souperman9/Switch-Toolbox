@@ -100,7 +100,7 @@ namespace Toolbox.Library.Animations
 
         public void Save(string FileName)
         {
-            Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
+           var culture = new CultureInfo("en-US");
 
             StringBuilder o = new StringBuilder();
 
@@ -118,7 +118,7 @@ namespace Toolbox.Library.Animations
                 for (int i = 0; i < Bones.bones.Count; i++)
                 {
                     STBone b = Bones.bones[i];
-                    o.AppendFormat("{0} {1} {2} {3} {4} {5} {6}\n", i, 
+                    o.AppendFormat(culture, "{0} {1} {2} {3} {4} {5} {6}\n", i, 
                         b.Position.X,
                         b.Position.Y,
                         b.Position.Z,
@@ -130,8 +130,6 @@ namespace Toolbox.Library.Animations
             }
 
             File.WriteAllText(FileName, o.ToString());
-
-            Thread.CurrentThread.CurrentCulture = CultureInfo.DefaultThreadCurrentCulture;
         }
 
         public static Animation Read(string fname,STSkeleton v)
@@ -290,8 +288,7 @@ namespace Toolbox.Library.Animations
 
         public static void Save(STSkeletonAnimation anim, String Fname)
         {
-            System.Globalization.CultureInfo customCulture = (System.Globalization.CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
-            customCulture.NumberFormat.NumberDecimalSeparator = ".";
+            System.Threading.Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
             STSkeleton Skeleton = anim.GetActiveSkeleton();
 
@@ -308,7 +305,7 @@ namespace Toolbox.Library.Animations
 
                 file.WriteLine("skeleton");
                 anim.SetFrame(0);
-                for (int i = 0; i <= anim.FrameCount; i++)
+                for (int i = 0; i <= Math.Max(1, anim.FrameCount); i++)
                 {
                     anim.SetFrame(i);
                     anim.NextFrame();
@@ -335,8 +332,7 @@ namespace Toolbox.Library.Animations
 
         public static void Save(Animation anim, STSkeleton Skeleton, String Fname)
         {
-            System.Globalization.CultureInfo customCulture = (System.Globalization.CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
-            customCulture.NumberFormat.NumberDecimalSeparator = ".";
+            System.Threading.Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(@Fname))
             {

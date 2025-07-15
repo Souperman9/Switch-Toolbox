@@ -34,6 +34,7 @@
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.stPanel2 = new Toolbox.Library.Forms.STPanel();
             this.stPanel1 = new Toolbox.Library.Forms.STPanel();
+            this.backgroundPB = new System.Windows.Forms.PictureBox();
             this.stPanel4 = new Toolbox.Library.Forms.STPanel();
             this.noteifcationLbl = new Toolbox.Library.Forms.STLabel();
             this.stPanel5 = new Toolbox.Library.Forms.STPanel();
@@ -42,7 +43,6 @@
             this.stContextMenuStrip2 = new Toolbox.Library.Forms.STContextMenuStrip(this.components);
             this.copyImageToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.stPanel3 = new Toolbox.Library.Forms.STPanel();
-            this.backgroundPB = new System.Windows.Forms.PictureBox();
             this.alphaBtn = new Toolbox.Library.Forms.STButton();
             this.editBtn = new Toolbox.Library.Forms.STButton();
             this.saveBtn = new Toolbox.Library.Forms.STButton();
@@ -92,11 +92,11 @@
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.SuspendLayout();
             this.stPanel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.backgroundPB)).BeginInit();
             this.stPanel4.SuspendLayout();
             this.stPanel5.SuspendLayout();
             this.stContextMenuStrip2.SuspendLayout();
             this.stPanel3.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.backgroundPB)).BeginInit();
             this.stContextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -142,6 +142,15 @@
             this.stPanel1.Name = "stPanel1";
             this.stPanel1.Size = new System.Drawing.Size(389, 502);
             this.stPanel1.TabIndex = 2;
+            // 
+            // backgroundPB
+            // 
+            this.backgroundPB.Location = new System.Drawing.Point(363, 0);
+            this.backgroundPB.Name = "backgroundPB";
+            this.backgroundPB.Size = new System.Drawing.Size(23, 24);
+            this.backgroundPB.TabIndex = 18;
+            this.backgroundPB.TabStop = false;
+            this.backgroundPB.MouseClick += new System.Windows.Forms.MouseEventHandler(this.imageBGComboBox_MouseClick);
             // 
             // stPanel4
             // 
@@ -224,15 +233,6 @@
             this.stPanel3.Size = new System.Drawing.Size(520, 51);
             this.stPanel3.TabIndex = 3;
             this.stPanel3.Paint += new System.Windows.Forms.PaintEventHandler(this.stPanel3_Paint);
-            // 
-            // backgroundPB
-            // 
-            this.backgroundPB.Location = new System.Drawing.Point(363, 0);
-            this.backgroundPB.Name = "backgroundPB";
-            this.backgroundPB.Size = new System.Drawing.Size(23, 24);
-            this.backgroundPB.TabIndex = 18;
-            this.backgroundPB.TabStop = false;
-            this.backgroundPB.MouseClick += new System.Windows.Forms.MouseEventHandler(this.imageBGComboBox_MouseClick);
             // 
             // alphaBtn
             // 
@@ -653,6 +653,7 @@
             this.splitContainer1.ResumeLayout(false);
             this.stPanel1.ResumeLayout(false);
             this.stPanel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.backgroundPB)).EndInit();
             this.stPanel4.ResumeLayout(false);
             this.stPanel4.PerformLayout();
             this.stPanel5.ResumeLayout(false);
@@ -660,7 +661,6 @@
             this.stContextMenuStrip2.ResumeLayout(false);
             this.stPanel3.ResumeLayout(false);
             this.stPanel3.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.backgroundPB)).EndInit();
             this.stContextMenuStrip1.ResumeLayout(false);
             this.stContextMenuStrip1.PerformLayout();
             this.ResumeLayout(false);

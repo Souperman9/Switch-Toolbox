@@ -103,7 +103,7 @@ namespace FirstPlugin
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
 
-            CollisionPresetData.LoadPresets(Directory.GetFiles("KclMaterialPresets"));
+            CollisionPresetData.LoadPresets(Directory.GetFiles(path));
         }
 
         class MenuExt : IFileMenuExtension
@@ -401,7 +401,7 @@ namespace FirstPlugin
             if (sfd.ShowDialog() == DialogResult.OK)
             {
                 var obj = KclFile.CreateGenericModel();
-                obj.Save(sfd.FileName, true);
+                obj.Save(sfd.FileName);
             }
         }
 

@@ -22,8 +22,8 @@ namespace Toolbox.Library
         {
             using (var reader = new FileReader(stream, true))
             {
-                hasMagic = reader.CheckSignature(4, "LzS\x01");
-                return hasMagic || Utils.GetExtension(fileName) == ".lzs";
+                hasMagic = true;
+                return reader.CheckSignature(4, "LzS\x01");
             }
         }
 

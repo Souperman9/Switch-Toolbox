@@ -12,7 +12,7 @@ namespace Toolbox.Library
     public class LZ4F : ICompressionFormat
     {
         public string[] Description { get; set; } = new string[] { "LZ4F Compression" };
-        public string[] Extension { get; set; } = new string[] { "*.cmp", "*.lz4f" };
+        public string[] Extension { get; set; } = new string[] { "*.cmp", "*.cmpbin", "*.lz4f" };
 
         public override string ToString() { return "LZ4F"; }
 

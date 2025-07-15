@@ -27,7 +27,7 @@ namespace Bfres.Structs
         public ToolStripItem[] GetContextMenuItems()
         {
             List<ToolStripItem> Items = new List<ToolStripItem>();
-            Items.Add(new ToolStripMenuItem("Import Object", null, Import, Keys.Control | Keys.I));
+            Items.Add(new ToolStripMenuItem("Import Static Object", null, Import, Keys.Control | Keys.I));
             Items.Add(new ToolStripSeparator());
             Items.Add(new ToolStripMenuItem("New Empty Object", null, CreateEmpty, Keys.Control | Keys.N));
             Items.Add(new ToolStripSeparator());
@@ -167,7 +167,7 @@ namespace Bfres.Structs
             List<ToolStripItem> Items = new List<ToolStripItem>();
 
             Items.Add(new ToolStripMenuItem("Export", null, Export, Keys.Control | Keys.E));
-            Items.Add(new ToolStripMenuItem("Replace", null, Replace, Keys.Control | Keys.R));
+            Items.Add(new ToolStripMenuItem("Replace (Static)", null, Replace, Keys.Control | Keys.R));
             Items.Add(new ToolStripSeparator());
             Items.Add(new ToolStripMenuItem("Rename", null, Rename, Keys.Control | Keys.N));
             Items.Add(new ToolStripSeparator());
@@ -195,6 +195,11 @@ namespace Bfres.Structs
             normalsMenu.DropDownItems.Add(new ToolStripMenuItem("Invert", null, InvertNormals));
             normalsMenu.DropDownItems.Add(new ToolStripMenuItem("Recalculate", null, RecalculateNormals));
             Items.Add(normalsMenu);
+			
+            ToolStripMenuItem colorMenu = new ToolStripMenuItem("Colors");
+            colorMenu.DropDownItems.Add(new ToolStripMenuItem("Set Color", null, SetVertexColorDialog));
+            colorMenu.DropDownItems.Add(new ToolStripMenuItem("Set As White", null, SetVertexColorWhite));
+            Items.Add(colorMenu);
 
             Items.Add(new ToolStripMenuItem("Recalulate Tangents/Bitangents", null, CalcTansBitans, Keys.Control | Keys.T));
             Items.Add(new ToolStripMenuItem("Fill Tangent Space with constant", null, FillTangentsAction, Keys.Control | Keys.W));
@@ -285,6 +290,8 @@ namespace Bfres.Structs
                 {
                     vertices[v].pos = Vector3.TransformPosition(vertices[v].pos, SingleBind);
                     vertices[v].nrm = Vector3.TransformNormal(vertices[v].nrm, SingleBind);
+                    vertices[v].tan.Xyz = Vector3.TransformNormal(vertices[v].tan.Xyz, SingleBind);
+                    vertices[v].bitan.Xyz = Vector3.TransformNormal(vertices[v].bitan.Xyz, SingleBind);
                 }
                 else if (VertexSkinCount == 1)
                 {
@@ -296,6 +303,8 @@ namespace Bfres.Structs
 
                     vertices[v].pos = Vector3.TransformPosition(vertices[v].pos, SingleBindLocal);
                     vertices[v].nrm = Vector3.TransformNormal(vertices[v].nrm, SingleBindLocal);
+                    vertices[v].tan.Xyz = Vector3.TransformNormal(vertices[v].tan.Xyz, SingleBindLocal);
+                    vertices[v].bitan.Xyz = Vector3.TransformNormal(vertices[v].bitan.Xyz, SingleBindLocal);
                 }
             }
 
@@ -350,7 +359,7 @@ namespace Bfres.Structs
         private void GenerateBoundingBoxes(object sender, EventArgs args)
         {
             Cursor.Current = Cursors.WaitCursor;
-            CreateNewBoundingBoxes();
+            CreateNewBoundingBoxes(GetParentModel());
             SaveShape(GetResFileU() != null);
             UpdateVertexData();
             Cursor.Current = Cursors.Default;
@@ -366,12 +375,12 @@ namespace Bfres.Structs
             Cursor.Current = Cursors.Default;
         }
 
-        public void GenerateDummyLODMeshes()
+        public void GenerateDummyLODMeshes(int count = 2)
         {
             var mesh = lodMeshes.FirstOrDefault();
             while (true)
             {
-                if (lodMeshes.Count >= 3)
+                if (lodMeshes.Count >= count + 1)
                     break;
 
                 LOD_Mesh lod = new LOD_Mesh();
@@ -385,7 +394,7 @@ namespace Bfres.Structs
                 lod.subMeshes.Add(subMesh);
             }
 
-            CreateNewBoundingBoxes();
+            CreateNewBoundingBoxes(GetParentModel());
         }
 
         private void GenerateLODMeshes(object sender, EventArgs args)
@@ -394,7 +403,7 @@ namespace Bfres.Structs
 
             //Todo add lod generating
 
-            CreateNewBoundingBoxes();
+            CreateNewBoundingBoxes(GetParentModel());
             SaveShape(GetResFileU() != null);
             UpdateVertexData();
             GenerateBoundingNodes();
@@ -416,7 +425,7 @@ namespace Bfres.Structs
                     lodMeshes.Remove(meshes[i]);
             }
 
-            CreateNewBoundingBoxes();
+            CreateNewBoundingBoxes(GetParentModel());
             SaveShape(GetResFileU() != null);
             UpdateVertexData();
             GenerateBoundingNodes();
@@ -669,14 +678,14 @@ namespace Bfres.Structs
             {
                 try
                 {
-                    bool UseUVLayer2 = false;
+                    int UseUVIndex = 0;
 
                     //check second UV layer
                     if (Parent != null) {
-                        UseUVLayer2 = GetFMAT().IsNormalMapTexCoord2();
+                        UseUVIndex = GetFMAT().GetNormalMapUVIndex();
                     }
 
-                    CalculateTangentBitangent(UseUVLayer2);
+                    CalculateTangentBitangent(UseUVIndex);
                 }
                 catch (Exception ex)
                 {
@@ -779,7 +788,7 @@ namespace Bfres.Structs
                 }
             }
 
-            bool UseUVLayer2 = false;
+            int UseUVIndex = 0;
 
             //for BOTW if it uses UV layer 2 for normal maps use second UV map
             if (GetFMAT().shaderassign.options.ContainsKey("uking_texture2_texcoord"))
@@ -787,10 +796,16 @@ namespace Bfres.Structs
                 float value = float.Parse(GetFMAT().shaderassign.options["uking_texture2_texcoord"]);
 
                 if (value == 1)
-                    UseUVLayer2 = true;
+                    UseUVIndex = 1;
             }
 
-            CalculateTangentBitangent(UseUVLayer2);
+            //for TOTK use o_texture2_texcoord to find required uv layer for tangents
+            if (GetFMAT().shaderassign.options.ContainsKey("o_texture2_texcoord"))
+            {
+                UseUVIndex = int.TryParse(GetFMAT().shaderassign.options["o_texture2_texcoord"], out UseUVIndex) ? UseUVIndex : 0;
+            }
+
+            CalculateTangentBitangent(UseUVIndex);
             SaveVertexBuffer(GetResFileU() != null);
             UpdateVertexData();
             Cursor.Current = Cursors.Default;
@@ -965,13 +980,13 @@ namespace Bfres.Structs
                                     VertexSkinCount = obj.GetMaxSkinInfluenceCount();
 
                                 lodMeshes = obj.lodMeshes;
-                                CreateNewBoundingBoxes();
                                 CreateBoneList(obj, (FMDL)Parent.Parent, settings.LimitSkinCount, ForceSkinInfluenceMax);
                                 CreateIndexList(obj, (FMDL)Parent.Parent, settings.LimitSkinCount, ForceSkinInfluenceMax);
                                 BoneIndices = GetIndices(GetParentModel().Skeleton);
 
                                 ApplyImportSettings(settings, GetFMAT());
 
+                                CreateNewBoundingBoxes(GetParentModel());
                                 OptmizeAttributeFormats();
                                 SaveShape(IsWiiU);
                                 SaveVertexBuffer(IsWiiU);
@@ -982,7 +997,33 @@ namespace Bfres.Structs
                         break;
                 }
                 UpdateVertexData();
+                UpdateEditor();
             }
+        }
+        public void UpdateVertexSkinCount(int NewSkinCount)
+        {
+            Cursor.Current = Cursors.WaitCursor;
+
+            // Convert to and from rigid skinning
+            if ((VertexSkinCount == 1 && GetAreVerticiesRigidSkinned()) ||
+                (NewSkinCount == 1 && !GetAreVerticiesRigidSkinned()))
+            {
+                ConvertSkinningMethod();
+            }
+
+            VertexSkinCount = (byte)NewSkinCount;
+            ChangeBoneListCount(NewSkinCount);
+            UpdateVertexAttributeBySkinCount(NewSkinCount);
+            BoneIndices = GetIndices(GetParentModel().Skeleton);
+
+            OptmizeAttributeFormats();
+            SaveShape(IsWiiU);
+            SaveVertexBuffer(IsWiiU);
+
+            Cursor.Current = Cursors.Default;
+
+            UpdateVertexData();
+            UpdateEditor();
         }
         public void CreateIndexList(STGenericObject ob, FMDL mdl = null, bool ForceSkinLimt = false, int LimitAmount = 4)
         {
@@ -1067,6 +1108,7 @@ namespace Bfres.Structs
                 }
             }
 
+
             List<string> BonesNotMatched = new List<string>();
             foreach (Vertex v in ob.vertices)
             {
@@ -1081,13 +1123,13 @@ namespace Bfres.Structs
                         {
                             if (v.boneIds.Count < ForcedSkinAmount)
                             {
-                                STConsole.WriteLine(bone.SmoothMatrixIndex + " mesh " + Text + " bone " + bn);
-                                v.boneIds.Add(bone.SmoothMatrixIndex);
+                                var index = Array.FindIndex(mdl.Skeleton.Node_Array, boneIndex => mdl.Skeleton.bones[boneIndex].Text == bn);
+                                v.boneIds.Add(index);
                             }
                         }
                         else if (bone.RigidMatrixIndex != -1)
                         {
-                            RigidIds.Add(bone.RigidMatrixIndex);
+                            v.boneIds.Add(bone.RigidMatrixIndex);
                         }
                         else if (bone.SmoothMatrixIndex != -1)
                         {
@@ -1170,36 +1212,284 @@ namespace Bfres.Structs
                 }
             }
         }
+        public void ChangeBoneListCount(int NewSkinCount)
+        {
+            foreach (Vertex v in vertices)
+            {
+                for (int i = 0; i < NewSkinCount; i++)
+                {
+                    if (v.boneIds.Count < VertexSkinCount)
+                    {
+                        v.boneIds.Add(0);
 
-        public void CreateNewBoundingBoxes()
+                        if (v.boneWeights.Count > 0)
+                        {
+                            v.boneWeights.Add(0);
+                        }
+                    }
+                    else if (v.boneIds.Count > VertexSkinCount)
+                    {
+                        v.boneIds.RemoveAt(v.boneIds.Count - 1);
+
+                        if (v.boneWeights.Count > 0)
+                        {
+                            v.boneWeights.RemoveAt(v.boneIds.Count - 1);
+                        }
+                    }
+                }
+            }
+        }
+        public void UpdateVertexAttributeBySkinCount(int NewSkinCount)
+        {
+            int attCount = (int)Math.Ceiling(NewSkinCount / 4.0);
+            int existingAttCount = vertexAttributes.FindAll(att => att.Name.Contains("_w")).Count;
+
+            // Get first existing _w and _i
+            VertexAttribute wFirstAtt = vertexAttributes.Find(att => att.Name == "_w0");
+            VertexAttribute iFirstAtt = vertexAttributes.Find(att => att.Name == "_i0");
+
+            // No existing weight attribute groups
+            if (wFirstAtt == null || iFirstAtt == null)
+            {
+                return;
+            }
+
+            // Add missing attributes
+            for (int i = 0; i < attCount; i++)
+            {
+                VertexAttribute wAtt = vertexAttributes.Find(att => att.Name == "_w" + i.ToString());
+                VertexAttribute iAtt = vertexAttributes.Find(att => att.Name == "_i" + i.ToString());
+
+                if (wAtt == null)
+                {
+                    VertexAttribute newAtt = new FSHP.VertexAttribute();
+                    newAtt.Name = "_w" + i.ToString();
+                    newAtt.Format = wFirstAtt.Format;
+                    vertexAttributes.Add(newAtt);
+                }
+
+                if (iAtt == null)
+                {
+                    VertexAttribute newAtt = new FSHP.VertexAttribute();
+                    newAtt.Name = "_i" + i.ToString();
+                    newAtt.Format = iFirstAtt.Format;
+                    vertexAttributes.Add(newAtt);
+                }
+            }
+
+            // Remove extra attributes
+            for (int i = existingAttCount - 1; i >= 0; i--)
+            {
+                if (i < attCount)
+                {
+                    continue;
+                }
+                vertexAttributes.RemoveAll(att => att.Name == "_w" + i.ToString());
+                vertexAttributes.RemoveAll(att => att.Name == "_i" + i.ToString());
+            }
+        }
+        public void ConvertSkinningMethod()
+        {
+            bool isConvertToSmooth = GetAreVerticiesRigidSkinned();
+
+            // Get Model
+            FMDL mdl = (FMDL)Parent.Parent;
+            if (mdl == null)
+            {
+                return;
+            }
+
+            foreach (Vertex v in vertices)
+            {
+                for (int i = 0; i < v.boneIds.Count; i++)
+                {
+                    // Convert to smooth skinning
+                    if (isConvertToSmooth)
+                    {
+                        STBone rigidBone = mdl.Skeleton.bones.Find(bone => bone.RigidMatrixIndex == v.boneIds[i]);
+                        if (rigidBone == null || rigidBone.SmoothMatrixIndex == -1)
+                        {
+                            continue;
+                        }
+
+                        var smoothBoneIndex = Array.FindIndex(mdl.Skeleton.Node_Array, boneIndex =>
+                            mdl.Skeleton.bones[boneIndex].Text == rigidBone.Text);
+                        if (smoothBoneIndex == -1)
+                        {
+                            throw new Exception("Convert To Smooth: Smooth Bone index not found for vertex" + i.ToString());
+                        }
+
+                        v.boneIds[i] = smoothBoneIndex;
+                    }
+                    else // Convert to rigid skinning
+                    {
+                        STBone smoothBone = mdl.Skeleton.bones[mdl.Skeleton.Node_Array[v.boneIds[i]]];
+                        if (smoothBone == null || smoothBone.RigidMatrixIndex == -1)
+                        {
+                            continue;
+                        }
+                        v.boneIds[i] = smoothBone.RigidMatrixIndex;
+                    }
+                }
+            }
+        }
+        public bool GetAreVerticiesRigidSkinned()
+        {
+            FMDL mdl = (FMDL)Parent.Parent;
+            if (mdl == null)
+            {
+                return false;
+            }
+
+            foreach (Vertex v in vertices)
+            {
+                for (int i = 0; i < v.boneIds.Count; i++)
+                {
+                    STBone foundBone = mdl.Skeleton.bones.Find(x => x.RigidMatrixIndex == v.boneIds[i]);
+                    if (foundBone != null)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        public int GetLowestPossibleVertexSkinCount()
+        {
+            int lowestSkinCount = 0;
+
+            // Find any weights and get the lowest possibe weight value
+            foreach (var v in vertices)
+            {
+                int maxWeightCount = v.boneWeights.FindLastIndex(w => w > 0) + 1;
+                if (lowestSkinCount < maxWeightCount)
+                {
+                    lowestSkinCount = maxWeightCount;
+                }
+            }
+
+            return lowestSkinCount;
+        }
+        public void CreateNewBoundingBoxes(FMDL model)
         {
             boundingBoxes.Clear();
             boundingRadius.Clear();
             foreach (LOD_Mesh mesh in lodMeshes)
             {
-                BoundingBox box = CalculateBoundingBox();
+                BoundingBox box = CalculateBoundingBox(model);
                 boundingBoxes.Add(box);
-                boundingRadius.Add((float)(box.Center.Length + box.Extend.Length));
+                boundingRadius.Add(box.Radius);
                 foreach (LOD_Mesh.SubMesh sub in mesh.subMeshes)
                     boundingBoxes.Add(box);
             }
         }
-        private BoundingBox CalculateBoundingBox()
+
+        private BoundingBox CalculateBoundingBox(FMDL model)
         {
-            Vector3 Max = new Vector3();
-            Vector3 Min = new Vector3();
+            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
-            Min = CalculateBBMin(vertices);
-            Max = CalculateBBMax(vertices);
-            Vector3 center = Max + Min;
+            if (VertexSkinCount > 0)
+            {
+                var aabb = CalculateSkinnedBoundings(model, vertices);
+                //Failed to get bounding data for some reason, calculate normally
+                //This shouldn't happen but it's a fail safe option.
+                if (aabb.Count == 0)
+                {
+                    min = CalculateBBMin(vertices);
+                    max = CalculateBBMax(vertices);
+                }
+                else
+                {
+                    //Find largest bounding box
+                    foreach (var bounding in aabb)
+                    {
+                        min.X = Math.Min(bounding.Min.X, min.X);
+                        min.Y = Math.Min(bounding.Min.Y, min.Y);
+                        min.Z = Math.Min(bounding.Min.Z, min.Z);
+                        max.X = Math.Max(bounding.Max.X, max.X);
+                        max.Y = Math.Max(bounding.Max.Y, max.Y);
+                        max.Z = Math.Max(bounding.Max.Z, max.Z);
+                    }
+                }
 
-            float xxMax = GetExtent(Max.X, Min.X);
-            float yyMax = GetExtent(Max.Y, Min.Y);
-            float zzMax = GetExtent(Max.Z, Min.Z);
+                var c = (min + max) / 2.0f;
+                var e = (max - min) / 2.0f;
 
+                float sphereRadius = (float)(c.Length + e.Length);
+
+                return new BoundingBox()
+                {
+                    Radius = sphereRadius,
+                    Center = new Vector3(c.X, c.Y, c.Z),
+                    Extend = new Vector3(e.X, e.Y, e.Z),
+                };
+            }
+            else
+            {
+                min = CalculateBBMin(vertices);
+                max = CalculateBBMax(vertices);
+            }
+
+            Vector3 center = max + min;
+
+            float xxMax = GetExtent(max.X, min.X);
+            float yyMax = GetExtent(max.Y, min.Y);
+            float zzMax = GetExtent(max.Z, min.Z);
             Vector3 extend = new Vector3(xxMax, yyMax, zzMax);
 
-            return new BoundingBox() { Center = center, Extend = extend };
+            float radius = (float)(center.Length + extend.Length);
+
+            return new BoundingBox() { Radius = radius, Center = center, Extend = extend };
+        }
+
+        private List<AABB> CalculateSkinnedBoundings(FMDL model, List<Vertex> vertices)
+        {
+            Dictionary<int, AABB> skinnedBoundings = new Dictionary<int, AABB>();
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                foreach (var boneID in vertices[i].boneIds)
+                {
+                    var index = model.Skeleton.Node_Array[boneID];
+
+                    if (!skinnedBoundings.ContainsKey(index))
+                        skinnedBoundings.Add(index, new AABB());
+
+                    //Get the skinned bone transform
+                    var transform = model.Skeleton.bones[index].Transform;
+                    var inverted = transform.Inverted();
+
+                    //Get the position in local coordinates
+                    var position = vertices[i].pos;
+                    position = OpenTK.Vector3.TransformPosition(position, inverted);
+
+                    var bounding = skinnedBoundings[index];
+                    //Set the min and max values
+                    bounding.Min.X = Math.Min(bounding.Min.X, position.X);
+                    bounding.Min.Y = Math.Min(bounding.Min.Y, position.Y);
+                    bounding.Min.Z = Math.Min(bounding.Min.Z, position.Z);
+                    bounding.Max.X = Math.Max(bounding.Max.X, position.X);
+                    bounding.Max.Y = Math.Max(bounding.Max.Y, position.Y);
+                    bounding.Max.Z = Math.Max(bounding.Max.Z, position.Z);
+                }
+            }
+            return skinnedBoundings.Values.ToList();
+        }
+
+        class AABB
+        {
+            public Vector3 Min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            public Vector3 Max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+        }
+
+        private float CalculateBoundingRadius(Vector3 min, Vector3 max)
+        {
+            Vector3 length = max - min;
+           return CalculateRadius(length.X / 2.0f, length.Y / 2.0f);
+        }
+
+        private static float CalculateRadius(float horizontalLeg, float verticalLeg) {
+            return (float)Math.Sqrt((horizontalLeg * horizontalLeg) + (verticalLeg * verticalLeg));
         }
 
         private float GetExtent(float max, float min)
@@ -1267,6 +1557,7 @@ namespace Bfres.Structs
         {
             public Vector3 Center;
             public Vector3 Extend;
+            public float Radius;
         }
 
         public List<VertexAttribute> vertexAttributes = new List<VertexAttribute>();
@@ -1479,25 +1770,19 @@ namespace Bfres.Structs
                     vert.Format = att.Format;
                     atrib.Add(vert);
                 }
-                if (att.Name == "_w0")
+                if (att.Name == "_g3d_02_u0_u1")
                 {
                     VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
                     vert.Name = att.Name;
-                    vert.Data = weights.ToArray();
+                    vert.Data = uv0.ToArray();
                     vert.Format = att.Format;
                     atrib.Add(vert);
-
-                    for (int i = 0; i < weights.Count; i++)
-                    {
-                        Console.WriteLine($"w {i} {weights[i]}");
-                    }
-
                 }
-                if (att.Name == "_i0")
+                if (att.Name == "_g3d_02_u2_u3")
                 {
                     VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
                     vert.Name = att.Name;
-                    vert.Data = boneInd.ToArray();
+                    vert.Data = uv2.ToArray();
                     vert.Format = att.Format;
                     atrib.Add(vert);
                 }
@@ -1525,6 +1810,58 @@ namespace Bfres.Structs
                     vert.Format = att.Format;
                     atrib.Add(vert);
                 }
+                if (att.Name == "_c1")
+                {
+                    VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
+                    vert.Name = att.Name;
+                    vert.Data = colors1.ToArray();
+                    vert.Format = att.Format;
+                    atrib.Add(vert);
+                }
+                if (att.Name == "_c2")
+                {
+                    VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
+                    vert.Name = att.Name;
+                    vert.Data = colors2.ToArray();
+                    vert.Format = att.Format;
+                    atrib.Add(vert);
+                }
+
+                if (att.Name == "_c3")
+                {
+                    VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
+                    vert.Name = att.Name;
+                    vert.Data = colors3.ToArray();
+                    vert.Format = att.Format;
+                    atrib.Add(vert);
+                }
+
+                // Set _w and _i 
+                for (int i = 0; i < weights.Count; i++)
+                {
+                    if (att.Name == "_w" + i.ToString())
+                    {
+                        VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
+                        vert.Name = att.Name;
+                        vert.Data = weights[i].ToArray();
+                        vert.Format = att.Format;
+                        atrib.Add(vert);
+
+                        for (int j = 0; j < weights.Count; j++)
+                        {
+                            Console.WriteLine($"w {j} {weights[j]}");
+                        }
+
+                    }
+                    if (att.Name == "_i" + i.ToString())
+                    {
+                        VertexBufferHelperAttrib vert = new VertexBufferHelperAttrib();
+                        vert.Name = att.Name;
+                        vert.Data = boneInd[i].ToArray();
+                        vert.Format = att.Format;
+                        atrib.Add(vert);
+                    }
+                }
             }
             if (atrib.Count == 0)
             {
@@ -1545,9 +1882,12 @@ namespace Bfres.Structs
         internal List<Syroot.Maths.Vector4F> uv2 = new List<Syroot.Maths.Vector4F>();
         internal List<Syroot.Maths.Vector4F> tans = new List<Syroot.Maths.Vector4F>();
         internal List<Syroot.Maths.Vector4F> bitans = new List<Syroot.Maths.Vector4F>();
-        internal List<Syroot.Maths.Vector4F> weights = new List<Syroot.Maths.Vector4F>();
-        internal List<Syroot.Maths.Vector4F> boneInd = new List<Syroot.Maths.Vector4F>();
+        internal List<List<Syroot.Maths.Vector4F>> weights = new List<List<Syroot.Maths.Vector4F>>();
+        internal List<List<Syroot.Maths.Vector4F>> boneInd = new List<List<Syroot.Maths.Vector4F>>();
         internal List<Syroot.Maths.Vector4F> colors = new List<Syroot.Maths.Vector4F>();
+        internal List<Syroot.Maths.Vector4F> colors1 = new List<Syroot.Maths.Vector4F>();
+        internal List<Syroot.Maths.Vector4F> colors2 = new List<Syroot.Maths.Vector4F>();
+        internal List<Syroot.Maths.Vector4F> colors3 = new List<Syroot.Maths.Vector4F>();
 
         public string GetBoneNameFromIndex(FMDL mdl, int index)
         {
@@ -1634,41 +1974,53 @@ namespace Bfres.Structs
                 {
                     case ResGFX.AttribFormat.Format_32_32_32_32_Single:
                     case ResGFX.AttribFormat.Format_32_32_32_Single:
+                    case ResGFX.AttribFormat.Format_32_Single:
                         attribute.Format = ResGFX.AttribFormat.Format_32_32_Single;
                         break;
                     case ResGFX.AttribFormat.Format_32_32_32_32_SInt:
                     case ResGFX.AttribFormat.Format_32_32_32_SInt:
+                    case ResGFX.AttribFormat.Format_32_SInt:
                         attribute.Format = ResGFX.AttribFormat.Format_32_32_SInt;
                         break;
                     case ResGFX.AttribFormat.Format_32_32_32_32_UInt:
                     case ResGFX.AttribFormat.Format_32_32_32_UInt:
+                    case ResGFX.AttribFormat.Format_32_UInt:
                         attribute.Format = ResGFX.AttribFormat.Format_32_32_UInt;
                         break;
                     case ResGFX.AttribFormat.Format_16_16_16_16_Single:
+                    case ResGFX.AttribFormat.Format_16_Single:
                         attribute.Format = ResGFX.AttribFormat.Format_16_16_Single;
                         break;
                     case ResGFX.AttribFormat.Format_16_16_16_16_SInt:
+                    case ResGFX.AttribFormat.Format_16_SInt:
                         attribute.Format = ResGFX.AttribFormat.Format_16_16_SInt;
                         break;
                     case ResGFX.AttribFormat.Format_16_16_16_16_UInt:
+                    case ResGFX.AttribFormat.Format_16_UInt:
                         attribute.Format = ResGFX.AttribFormat.Format_16_16_UInt;
                         break;
                     case ResGFX.AttribFormat.Format_8_8_8_8_UInt:
+                    case ResGFX.AttribFormat.Format_8_UInt:
                         attribute.Format = ResGFX.AttribFormat.Format_8_8_UInt;
                         break;
                     case ResGFX.AttribFormat.Format_8_8_8_8_SInt:
+                    case ResGFX.AttribFormat.Format_8_SInt:
                         attribute.Format = ResGFX.AttribFormat.Format_8_8_SInt;
                         break;
                     case ResGFX.AttribFormat.Format_8_8_8_8_SNorm:
+                    case ResGFX.AttribFormat.Format_8_SNorm:
                         attribute.Format = ResGFX.AttribFormat.Format_8_8_SNorm;
                         break;
                     case ResGFX.AttribFormat.Format_8_8_8_8_UNorm:
+                    case ResGFX.AttribFormat.Format_8_UNorm:
                         attribute.Format = ResGFX.AttribFormat.Format_8_8_UNorm;
                         break;
                     case ResGFX.AttribFormat.Format_8_8_8_8_SIntToSingle:
+                    case ResGFX.AttribFormat.Format_8_SIntToSingle:
                         attribute.Format = ResGFX.AttribFormat.Format_8_8_SIntToSingle;
                         break;
                     case ResGFX.AttribFormat.Format_8_8_8_8_UIntToSingle:
+                    case ResGFX.AttribFormat.Format_8_UIntToSingle:
                         attribute.Format = ResGFX.AttribFormat.Format_8_8_UIntToSingle;
                         break;
                 }
@@ -1678,13 +2030,76 @@ namespace Bfres.Structs
                 switch (attribute.Format)
                 {
                     case ResGFX.AttribFormat.Format_32_32_32_32_Single:
+                    case ResGFX.AttribFormat.Format_32_32_Single:
+                    case ResGFX.AttribFormat.Format_32_Single:
                         attribute.Format = ResGFX.AttribFormat.Format_32_32_32_Single;
                         break;
                     case ResGFX.AttribFormat.Format_32_32_32_32_SInt:
+                    case ResGFX.AttribFormat.Format_32_32_SInt:
+                    case ResGFX.AttribFormat.Format_32_SInt:
                         attribute.Format = ResGFX.AttribFormat.Format_32_32_32_SInt;
                         break;
                     case ResGFX.AttribFormat.Format_32_32_32_32_UInt:
+                    case ResGFX.AttribFormat.Format_32_32_UInt:
+                    case ResGFX.AttribFormat.Format_32_UInt:
                         attribute.Format = ResGFX.AttribFormat.Format_32_32_32_UInt;
+                        break;
+                }
+            }
+            if (VertexSkinCount >= 4)
+            {
+                switch (attribute.Format)
+                {
+                    case ResGFX.AttribFormat.Format_32_32_32_32_Single:
+                    case ResGFX.AttribFormat.Format_32_32_Single:
+                    case ResGFX.AttribFormat.Format_32_Single:
+                        attribute.Format = ResGFX.AttribFormat.Format_32_32_32_32_Single;
+                        break;
+                    case ResGFX.AttribFormat.Format_32_32_32_SInt:
+                    case ResGFX.AttribFormat.Format_32_32_SInt:
+                    case ResGFX.AttribFormat.Format_32_SInt:
+                        attribute.Format = ResGFX.AttribFormat.Format_32_32_32_32_SInt;
+                        break;
+                    case ResGFX.AttribFormat.Format_32_32_32_UInt:
+                    case ResGFX.AttribFormat.Format_32_32_UInt:
+                    case ResGFX.AttribFormat.Format_32_UInt:
+                        attribute.Format = ResGFX.AttribFormat.Format_32_32_32_32_UInt;
+                        break;
+                    case ResGFX.AttribFormat.Format_16_16_Single:
+                    case ResGFX.AttribFormat.Format_16_Single:
+                        attribute.Format = ResGFX.AttribFormat.Format_16_16_16_16_Single;
+                        break;
+                    case ResGFX.AttribFormat.Format_16_16_SInt:
+                    case ResGFX.AttribFormat.Format_16_SInt:
+                        attribute.Format = ResGFX.AttribFormat.Format_16_16_16_16_SInt;
+                        break;
+                    case ResGFX.AttribFormat.Format_16_16_UInt:
+                    case ResGFX.AttribFormat.Format_16_UInt:
+                        attribute.Format = ResGFX.AttribFormat.Format_16_16_16_16_UInt;
+                        break;
+                    case ResGFX.AttribFormat.Format_8_8_UInt:
+                    case ResGFX.AttribFormat.Format_8_UInt:
+                        attribute.Format = ResGFX.AttribFormat.Format_8_8_8_8_UInt;
+                        break;
+                    case ResGFX.AttribFormat.Format_8_8_SInt:
+                    case ResGFX.AttribFormat.Format_8_SInt:
+                        attribute.Format = ResGFX.AttribFormat.Format_8_8_8_8_SInt;
+                        break;
+                    case ResGFX.AttribFormat.Format_8_8_SNorm:
+                    case ResGFX.AttribFormat.Format_8_SNorm:
+                        attribute.Format = ResGFX.AttribFormat.Format_8_8_8_8_SNorm;
+                        break;
+                    case ResGFX.AttribFormat.Format_8_8_UNorm:
+                    case ResGFX.AttribFormat.Format_8_UNorm:
+                        attribute.Format = ResGFX.AttribFormat.Format_8_8_8_8_UNorm;
+                        break;
+                    case ResGFX.AttribFormat.Format_8_8_SIntToSingle:
+                    case ResGFX.AttribFormat.Format_8_SIntToSingle:
+                        attribute.Format = ResGFX.AttribFormat.Format_8_8_8_8_SIntToSingle;
+                        break;
+                    case ResGFX.AttribFormat.Format_8_8_UIntToSingle:
+                    case ResGFX.AttribFormat.Format_8_UIntToSingle:
+                        attribute.Format = ResGFX.AttribFormat.Format_8_8_8_8_UIntToSingle;
                         break;
                 }
             }
@@ -1702,6 +2117,19 @@ namespace Bfres.Structs
             colors.Clear();
             weights.Clear();
             boneInd.Clear();
+            colors1.Clear();
+            colors2.Clear();
+            colors3.Clear();
+
+            // Create arrays to be able to fit the needed skin count
+            int listCount = (int)Math.Ceiling(VertexSkinCount / 4.0);
+            for (int i = 0; i < listCount; i++)
+            {
+                weights.Add(new List<Syroot.Maths.Vector4F>());
+                boneInd.Add(new List<Syroot.Maths.Vector4F>());
+            }
+
+            int TargetVertexSkinCount = Math.Max(4, (int)VertexSkinCount);
 
             foreach (Vertex vtx in vertices)
             {
@@ -1713,37 +2141,43 @@ namespace Bfres.Structs
 
                     vtx.pos = TransformLocal(vtx.pos, boneId, VertexSkinCount == 1);
                     vtx.nrm = TransformLocal(vtx.nrm, boneId, VertexSkinCount == 1, false);
+                    vtx.tan.Xyz = TransformLocal(vtx.tan.Xyz, boneId, VertexSkinCount == 1, false);
+                    vtx.bitan.Xyz = TransformLocal(vtx.bitan.Xyz, boneId, VertexSkinCount == 1, false);
                 }
 
                 verts.Add(new Syroot.Maths.Vector4F(vtx.pos.X, vtx.pos.Y, vtx.pos.Z, 1.0f));
                 norms.Add(new Syroot.Maths.Vector4F(vtx.nrm.X, vtx.nrm.Y, vtx.nrm.Z, 0));
-                uv0.Add(new Syroot.Maths.Vector4F(vtx.uv0.X, vtx.uv0.Y, 0, 0));
+                uv0.Add(new Syroot.Maths.Vector4F(vtx.uv0.X, vtx.uv0.Y, vtx.uv1.X, vtx.uv1.Y));
                 uv1.Add(new Syroot.Maths.Vector4F(vtx.uv1.X, vtx.uv1.Y, 0, 0));
-                uv2.Add(new Syroot.Maths.Vector4F(vtx.uv2.X, vtx.uv2.Y, 0, 0));
+                uv2.Add(new Syroot.Maths.Vector4F(vtx.uv2.X, vtx.uv2.Y, vtx.uv3.X, vtx.uv3.Y));
                 tans.Add(new Syroot.Maths.Vector4F(vtx.tan.X, vtx.tan.Y, vtx.tan.Z, vtx.tan.W));
                 bitans.Add(new Syroot.Maths.Vector4F(vtx.bitan.X, vtx.bitan.Y, vtx.bitan.Z, vtx.bitan.W));
                 colors.Add(new Syroot.Maths.Vector4F(vtx.col.X, vtx.col.Y, vtx.col.Z, vtx.col.W));
+                colors1.Add(new Syroot.Maths.Vector4F(vtx.col2.X, vtx.col2.Y, vtx.col2.Z, vtx.col2.W));
+                colors2.Add(new Syroot.Maths.Vector4F(vtx.col3.X, vtx.col3.Y, vtx.col3.Z, vtx.col3.W));
+                colors3.Add(new Syroot.Maths.Vector4F(vtx.col4.X, vtx.col4.Y, vtx.col4.Z, vtx.col4.W));
 
-                float[] weightsA = new float[4];
-                int[] indicesA = new int[4];
+                // Init arrays based on skincount
+                float[] weightsA = new float[TargetVertexSkinCount];
+                int[] indicesA = new int[TargetVertexSkinCount];
 
-
-                if (vtx.boneWeights.Count >= 1)
-                    weightsA[0] = vtx.boneWeights[0];
-                if (vtx.boneWeights.Count >= 2)
-                    weightsA[1] = vtx.boneWeights[1];
-                if (vtx.boneWeights.Count >= 3)
-                    weightsA[2] = vtx.boneWeights[2];
-                if (vtx.boneWeights.Count >= 4)
-                    weightsA[3] = vtx.boneWeights[3];
+                // Cache bone weights
+                for (int i = 0; i < VertexSkinCount; i++)
+                {
+                    if (vtx.boneWeights.Count > i)
+                    {
+                        weightsA[i] = vtx.boneWeights[i];
+                    }
+                }
 
                 var WeightAttribute = GetWeightAttribute(0);
 
                 //Produce identical results for the weight output as BFRES_Vertex.py
                 //This should prevent encoding back and exploding
                 int MaxWeight = 255;
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < TargetVertexSkinCount; i++)
                 {
+                    // If vertex has no weight for current skin count set an empty value
                     if (VertexSkinCount < i + 1 || vtx.boneWeights.Count < i + 1)
                     {
                         weightsA[i] = 0;
@@ -1767,13 +2201,38 @@ namespace Bfres.Structs
                     }
                 }
 
-                for (int i = 0; i < VertexSkinCount; i++) {
+                for (int i = 0; i < VertexSkinCount; i++)
+                {
                     if (vtx.boneIds.Count > i)
                         indicesA[i] = vtx.boneIds[i];
                 }
 
-                weights.Add(new Syroot.Maths.Vector4F(weightsA[0], weightsA[1], weightsA[2], weightsA[3]));
-                boneInd.Add(new Syroot.Maths.Vector4F(indicesA[0], indicesA[1], indicesA[2], indicesA[3]));
+                int v4ListIndex = 0;
+                int v4Index = 0;
+
+                Syroot.Maths.Vector4F vWeight4 = new Syroot.Maths.Vector4F();
+                Syroot.Maths.Vector4F vBoneInd4 = new Syroot.Maths.Vector4F();
+                for (int i = 0; i < TargetVertexSkinCount; i++)
+                {
+                    vWeight4[v4Index] = weightsA[i];
+                    vBoneInd4[v4Index] = indicesA[i];
+
+                    // Save a v4 set each time v4Index hits 3 (.w) or its the last index
+                    if (v4Index == 3 || i == TargetVertexSkinCount - 1)
+                    {
+                        if (weights.Count > v4ListIndex)
+                            weights[v4ListIndex].Add(vWeight4);
+                        if (boneInd.Count > v4ListIndex)
+                            boneInd[v4ListIndex].Add(vBoneInd4);
+
+                        vWeight4 = new Syroot.Maths.Vector4F();
+                        vBoneInd4 = new Syroot.Maths.Vector4F();
+                        v4ListIndex++;
+                        v4Index = 0;
+                        continue;
+                    }
+                    v4Index++;
+                }
             }
         }
 

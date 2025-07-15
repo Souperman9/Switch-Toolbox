@@ -158,9 +158,9 @@ namespace FirstPlugin
 
             if (value == "null")
                 return null;
-            else if (value == "true")
+            else if (value == "true" || value == "True")
                 return true;
-            else if (value == "false")
+            else if (value == "false" || value == "False")
                 return false;
             else if (tag == "!u")
                 return UInt32.Parse(value, CultureInfo.InvariantCulture);
@@ -228,10 +228,11 @@ namespace FirstPlugin
                     {
                         uint hash = Convert.ToUInt32(key, 16);
                         if (BYAML.Hashes.ContainsKey(hash))
+                        {
                             key = $"{BYAML.Hashes[hash]}";
-
-                        keyNode = new YamlScalarNode(key);
-                        keyNode.Tag = "!h";
+                            keyNode = new YamlScalarNode(key);
+                            keyNode.Tag = "!h";
+                        }
                     }
                     yamlNode.Add(keyNode, SaveNode(item.Key, item.Value));
                 }
@@ -253,7 +254,8 @@ namespace FirstPlugin
                 string tag = null;
                 if (node is int) tag = "!l";
                 else if (node is uint) tag = "!u";
-                else if (node is Int64) tag = "!ul";
+                else if (node is Int64) tag = "!ll";
+                else if (node is UInt64) tag = "!ul";
                 else if (node is double) tag = "!d";
                 else if (node is ByamlPathIndex) tag = "!p";
 

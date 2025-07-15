@@ -65,7 +65,10 @@ namespace Updater
                         Boot();
                         Environment.Exit(0);
                         break;
-
+                    case "-e":
+                    case "--exit":
+                        Environment.Exit(0);
+                        break;
                 }
             }
             Console.Read();
@@ -86,10 +89,21 @@ namespace Updater
                 SetAccessRule(dir);
 
                 string dirName = new DirectoryInfo(dir).Name;
+                string destDir = Path.Combine(folderDir, dirName + @"\");
 
-                if (Directory.Exists(Path.Combine(folderDir, dirName + @"\")))
-                    Directory.Delete(Path.Combine(folderDir, dirName + @"\"), true);
-                Directory.Move(dir, Path.Combine(folderDir, dirName + @"\"));
+                //Skip hash directory
+                if (dirName.Equals("Hashes", StringComparison.CurrentCultureIgnoreCase))
+                    continue;
+
+                if (Directory.Exists(destDir))
+                {
+                    Directory.Delete(destDir, true);
+                }
+
+                if (Directory.Exists(destDir))
+                    Directory.Delete(destDir, true);
+
+                Directory.Move(dir, destDir);
             }
             foreach (string file in Directory.GetFiles("master/"))
             {
@@ -100,20 +114,29 @@ namespace Updater
                 SetAccessRule(file);
                 SetAccessRule(folderDir);
 
-                if (File.Exists(Path.Combine(folderDir, Path.GetFileName(file))))
-                {
-                    File.Delete(Path.Combine(folderDir, Path.GetFileName(file)));
-                }
-                File.Move(file, Path.Combine(folderDir, Path.GetFileName(file)));
+                string destFile = Path.Combine(folderDir, Path.GetFileName(file));
+                if (File.Exists(destFile))
+                    File.Delete(destFile);
+
+                File.Move(file, destFile);
             }
         }
 
         static void SetAccessRule(string directory)
         {
-            System.Security.AccessControl.DirectorySecurity sec = System.IO.Directory.GetAccessControl(directory);
-            FileSystemAccessRule accRule = new FileSystemAccessRule(Environment.UserDomainName + "\\" + Environment.UserName, FileSystemRights.FullControl, AccessControlType.Allow);
-            sec.AddAccessRule(accRule);
+            try
+            {
+                System.Security.AccessControl.DirectorySecurity sec = System.IO.Directory.GetAccessControl(directory);
+                FileSystemAccessRule accRule = new FileSystemAccessRule(Environment.UserDomainName + "\\" + Environment.UserName, FileSystemRights.FullControl, AccessControlType.Allow);
+                sec.AddAccessRule(accRule);
+                Directory.SetAccessControl(directory, sec);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to set access rule for directory '{directory}': {ex.Message}");
+            }
         }
+
 
         static void Download(string CompileDate)
         {

@@ -92,6 +92,7 @@ namespace Toolbox.Library
                         break;
                     case "CameraNear":
                         float.TryParse(node.InnerText, out Runtime.CameraNear);
+						Runtime.CameraNear = (float)Math.Min(Math.Max(0.1, Runtime.CameraNear), 1.0f);
                         break;
                     case "PreviewScale":
                         float.TryParse(node.InnerText, out Runtime.previewScale);
@@ -179,6 +180,9 @@ namespace Toolbox.Library
                         break;
                     case "BotwGamePath":
                         Runtime.BotwGamePath = node.InnerText;
+                        break;
+                    case "TotkGamePath":
+                        Runtime.TotkGamePath = node.InnerText;
                         break;
                     case "SpecularCubeMapPath":
                         Runtime.PBR.SpecularCubeMapPath = node.InnerText;
@@ -281,7 +285,7 @@ namespace Toolbox.Library
                         bool.TryParse(node.InnerText, out Runtime.LayoutEditor.DisplayGrid);
                         break;
                     case "TitleKeys":
-                       Runtime.SwitchKeys.TitleKeys = node.InnerText;
+                        Runtime.SwitchKeys.TitleKeys = node.InnerText;
                         break;
                     case "ProdKeys":
                         Runtime.SwitchKeys.ProdKeys = node.InnerText;
@@ -316,6 +320,15 @@ namespace Toolbox.Library
                         break;
                     case "KCLUsePresetEditor":
                         bool.TryParse(node.InnerText, out Runtime.CollisionSettings.KCLUsePresetEditor);
+                        break;
+                    case "ShowCloseDialog":
+                        bool.TryParse(node.InnerText, out Runtime.ShowCloseDialog);
+                        break;
+                    case "displayGrid":
+                        bool.TryParse(node.InnerText, out Runtime.displayGrid);
+                        break;
+                    case "displayAxisLines":
+                        bool.TryParse(node.InnerText, out Runtime.displayAxisLines);
                         break;
                 }
             }
@@ -482,6 +495,7 @@ namespace Toolbox.Library
             mainSettingsNode.AppendChild(createNode(doc, "EnableVersionCheck", Runtime.EnableVersionCheck.ToString()));
             mainSettingsNode.AppendChild(createNode(doc, "FormTheme", Toolbox.Library.Forms.FormThemes.ActivePreset.ToString()));
             mainSettingsNode.AppendChild(createNode(doc, "MaximizeMdiWindow", Runtime.MaximizeMdiWindow.ToString()));
+            mainSettingsNode.AppendChild(createNode(doc, "ShowCloseDialog", Runtime.ShowCloseDialog.ToString()));
         }
         private static void AppendImageEditorSettings(XmlDocument doc, XmlNode parentNode)
         {
@@ -506,6 +520,7 @@ namespace Toolbox.Library
             PathsNode.AppendChild(createNode(doc, "Mk8dGamePath", Runtime.Mk8dGamePath.ToString()));
             PathsNode.AppendChild(createNode(doc, "TpGamePath", Runtime.TpGamePath.ToString()));
             PathsNode.AppendChild(createNode(doc, "BotwGamePath", Runtime.BotwGamePath.ToString()));
+            PathsNode.AppendChild(createNode(doc, "TotkGamePath", Runtime.TotkGamePath.ToString()));
             PathsNode.AppendChild(createNode(doc, "SpecularCubeMapPath", Runtime.PBR.SpecularCubeMapPath.ToString()));
             PathsNode.AppendChild(createNode(doc, "DiffuseCubeMapPath", Runtime.PBR.DiffuseCubeMapPath.ToString()));
             PathsNode.AppendChild(createNode(doc, "PkSwShGamePath", Runtime.PkSwShGamePath.ToString()));
@@ -578,8 +593,11 @@ namespace Toolbox.Library
             renderSettingsNode.AppendChild(createNode(doc, "MaxCameraSpeed", Runtime.MaxCameraSpeed.ToString()));
             renderSettingsNode.AppendChild(createNode(doc, "FrameCamera", Runtime.FrameCamera.ToString()));
             renderSettingsNode.AppendChild(createNode(doc, "cameraMovement", Runtime.cameraMovement.ToString()));
+            renderSettingsNode.AppendChild(createNode(doc, "displayAxisLines", Runtime.displayAxisLines.ToString()));
+            renderSettingsNode.AppendChild(createNode(doc, "displayGrid", Runtime.displayGrid.ToString()));
+
         }
-        
+
         private static void AppendResourceTableSettings(XmlDocument doc, XmlNode parentNode)
         {
             XmlNode resourceTableNode = doc.CreateElement("ResourceTables");

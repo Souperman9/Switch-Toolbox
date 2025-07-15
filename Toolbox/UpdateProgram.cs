@@ -26,16 +26,24 @@ namespace Toolbox
         {
             try
             {
+                VersionCheck versionCheck = new VersionCheck(true);
+
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
                 var client = new GitHubClient(new ProductHeaderValue("ST_UpdateTool"));
+
                 GetReleases(client).Wait();
+
+                var info = client.GetLastApiInfo();
+                if (info != null && info.RateLimit.Remaining <= 0)
+                    return;
+
                 GetCommits(client).Wait();
 
                 var asssemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
                 var version = string.Concat(asssemblyVersion.ToString().Reverse().Skip(2).Reverse());
 
-                var lastestRelease = Releases.FirstOrDefault(x => x.Name.Contains($"v{version}"));
-                if (lastestRelease != null)
+                var lastestRelease = Releases.FirstOrDefault();
+                if (lastestRelease != null && lastestRelease.Assets[0].UpdatedAt.ToString() == versionCheck.CompileDate)
                 {
                     Runtime.ProgramVersion = lastestRelease.TagName;
                     Runtime.CompileDate = lastestRelease.Assets[0].UpdatedAt.ToString();
@@ -66,7 +74,6 @@ namespace Toolbox
             }
             catch (Exception ex)
             {
-                Toolbox.Library.Forms.STErrorDialog.Show($"Failed to get latest update", "Updater", ex.ToString());
             }
         }
 

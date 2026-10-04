@@ -12,6 +12,8 @@ using OpenTK;
 using Toolbox.Library.Rendering;
 using Toolbox.Library.Collada;
 using Toolbox.Library.IO;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace Toolbox.Library
 {
@@ -19,6 +21,7 @@ namespace Toolbox.Library
     {
         public class ExportSettings
         {
+            public bool ExportDecomposed = false;
             public bool SuppressConfirmDialog = false;
             public bool OptmizeZeroWeights = true;
             public bool UseOldExporter = false;
@@ -28,6 +31,8 @@ namespace Toolbox.Library
             public bool UseTextureChannelComponents = true;
 
             public bool TransformColorUVs = false;
+            public bool ForceZeroShininessFbx = false;
+            public bool ExportNormalMapsAsFlatColorFbx = true;
 
             public bool AddLeafBones = false;
 
@@ -39,6 +44,23 @@ namespace Toolbox.Library
 
             public string ImageExtension = ".png";
             public string ImageFolder = "";
+
+            private string _configPath => Path.Combine(Runtime.ExecutableDir, "ExportSettings.json");
+
+            public ExportSettings Load()
+            {
+                if (!File.Exists(_configPath))
+                    Save();
+
+               return JsonConvert.DeserializeObject<ExportSettings>(File.ReadAllText(_configPath));
+            }
+            public void Save()
+            {
+                string json = JsonConvert.SerializeObject(this, Newtonsoft.Json.Formatting.Indented, new JsonSerializerSettings()
+                {
+                });
+                File.WriteAllText(_configPath, json);
+            }
         }
 
         public class Version
@@ -270,8 +292,9 @@ namespace Toolbox.Library
                         writer.AddJoint(bone.Text, bone.parentIndex == -1 ? "" :
                             skeleton.bones[bone.parentIndex].Text, Transform, InvTransform,
                             new float[3] { bone.Position.X, bone.Position.Y, bone.Position.Z },
-                            new float[3] { bone.EulerRotation.X, bone.EulerRotation.Y, bone.EulerRotation.Z },
-                            new float[3] { bone.Scale.X, bone.Scale.Y, bone.Scale.Z });
+                            new float[3] { bone.EulerRotation.X * STMath.Rad2Deg, bone.EulerRotation.Y * STMath.Rad2Deg, bone.EulerRotation.Z * STMath.Rad2Deg },
+                            new float[3] { bone.Scale.X, bone.Scale.Y, bone.Scale.Z },
+                            settings.ExportDecomposed);
                     }
                 }
 
@@ -511,7 +534,7 @@ namespace Toolbox.Library
                         writer.WriteGeometrySource(mesh.Text, SemanticType.COLOR, Color3.ToArray(), triangleLists.ToArray(), 2);
                     if (HasColors4)
                         writer.WriteGeometrySource(mesh.Text, SemanticType.COLOR, Color4.ToArray(), triangleLists.ToArray(), 3);
-                    
+
                     if (HasUV0)
                         writer.WriteGeometrySource(mesh.Text, SemanticType.TEXCOORD, UV0.ToArray(), triangleLists.ToArray(), 0);
 

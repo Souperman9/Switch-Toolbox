@@ -228,6 +228,7 @@
     <Compile Include="Compression\Formats\LZMA.cs" />
     <Compile Include="Compression\Formats\LZ77.cs" />
     <Compile Include="Compression\Formats\MtaCustomCmp.cs" />
+    <Compile Include="Compression\Formats\TrueYZ.cs" />
     <Compile Include="Compression\Formats\ZlibGZ.cs" />
     <Compile Include="Compression\Formats\Zstb.cs" />
     <Compile Include="Compression\Formats\Zstb_Kirby.cs" />
@@ -469,6 +470,9 @@
     <Compile Include="FileFormats\CSharpImageLibrary\ImageEngine.cs" />
     <Compile Include="FileFormats\DAE\collada_schema_1_4.cs" />
     <Compile Include="FileFormats\DAE\DAE.cs" />
+    <Compile Include="FileFormats\FBX\FbxExporter.cs" />
+    <Compile Include="FileFormats\FBX\FbxAnimationNativeWrapper.cs" />
+    <Compile Include="FileFormats\FBX\FbxNativeWrapper.cs" />
     <Compile Include="FileFormats\OBJ.cs" />
     <Compile Include="FileFormats\R4G4.cs" />
     <Compile Include="FileFormats\SEModel.cs" />

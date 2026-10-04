@@ -17,9 +17,17 @@ namespace Toolbox.Library.Forms
         public ExportModelSettings()
         {
             InitializeComponent();
+            Settings = Settings.Load();
 
             chkFlipUvsVertical.Checked = Settings.FlipTexCoordsVertical;
             exportTexturesChkBox.Checked = Settings.ExportTextures;
+            chkOldExporter.Checked = Settings.UseOldExporter;
+            chkVertexColors.Checked = Settings.UseVertexColors;
+            chkExportRiggedBonesOnly.Checked = Settings.OnlyExportRiggedBones;
+            chkApplyUVTransforms.Checked = Settings.TransformColorUVs;
+            chkTextureChannelComps.Checked = Settings.UseTextureChannelComponents;
+            chkForceZeroShininessFbx.Checked = Settings.ForceZeroShininessFbx;
+            chkNormalsAsFlatColorFbx.Checked = Settings.ExportNormalMapsAsFlatColorFbx;
         }
 
         private void exportTexturesChkBox_CheckedChanged(object sender, EventArgs e) {
@@ -52,7 +60,23 @@ namespace Toolbox.Library.Forms
         }
 
         private void chkTextureChannelComps_CheckedChanged(object sender, EventArgs e) {
-            Settings.UseTextureChannelComponents = chkApplyUVTransforms.Checked;
+            Settings.UseTextureChannelComponents = chkTextureChannelComps.Checked;
+        }
+
+        private void chkForceZeroShininessFbx_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.ForceZeroShininessFbx = chkForceZeroShininessFbx.Checked;
+        }
+
+        private void chkNormalsAsFlatColorFbx_CheckedChanged(object sender, EventArgs e)
+        {
+            Settings.ExportNormalMapsAsFlatColorFbx = chkNormalsAsFlatColorFbx.Checked;
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            Settings?.Save();
         }
     }
 }

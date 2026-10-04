@@ -554,12 +554,31 @@ namespace Bfres.Structs
                 case ".obj":
                     OBJ.ExportModel(FileName, this, GetTextures());
                     break;
+                case ".fbx":
+                    {
+                        ExportModelSettings fbxSettings = new ExportModelSettings();
+                        // Toggle colors when necessary as we export them by force 
+                        if (Model != null)
+                            fbxSettings.Settings.UseVertexColors = Model.VertexBuffers.Any(
+                                x => x.Attributes.Any(a => a.Name.StartsWith("_c")));
+                        else if (ModelU != null)
+                            fbxSettings.Settings.UseVertexColors = ModelU.VertexBuffers.Any(
+                                x => x.Attributes.Values.Any(a => a.Name.StartsWith("_c")));
+
+                        if (fbxSettings.ShowDialog() == DialogResult.OK)
+                            Toolbox.Library.FBX.FbxExporter.Export(FileName, fbxSettings.Settings, this, GetTextures(), Skeleton);
+                    }
+                    break;
                 default:
 
                     ExportModelSettings settings = new ExportModelSettings();
                     // Toggle colors when necessary as we export them by force 
-                    settings.Settings.UseVertexColors = Model.VertexBuffers.Any(
-                        x => x.Attributes.Any(a => a.Name.StartsWith("_c")));
+                    if (Model != null)
+                        settings.Settings.UseVertexColors = Model.VertexBuffers.Any(
+                            x => x.Attributes.Any(a => a.Name.StartsWith("_c")));
+                    else if (ModelU != null)
+                        settings.Settings.UseVertexColors = ModelU.VertexBuffers.Any(
+                            x => x.Attributes.Values.Any(a => a.Name.StartsWith("_c")));
 
                     if (settings.ShowDialog() == DialogResult.OK)
                         DAE.Export(FileName, settings.Settings, this, GetTextures(),
@@ -1117,6 +1136,7 @@ namespace Bfres.Structs
 
                         }
 
+                        Console.WriteLine("Importing Bones... ");
                         progressBar.Task = "Importing Bones... ";
                         progressBar.Refresh();
 
@@ -1124,13 +1144,119 @@ namespace Bfres.Structs
                         {
                             if (ImportedSkeleton.bones.Count > 0)
                             {
-                                Skeleton.bones.Clear();
-                                Skeleton.node.Nodes.Clear();
+                                //SMART MERGE: Match existing bones to preserve flags/indices
+                                Dictionary<string, BfresBone> ExistingBones = new Dictionary<string, BfresBone>();
+                                foreach (BfresBone bone in Skeleton.bones)
+                                {
+                                    if (!ExistingBones.ContainsKey(bone.Text))
+                                        ExistingBones.Add(bone.Text, bone);
+                                }
 
+                                List<BfresBone> NewBones = new List<BfresBone>();
+                                Skeleton.node.Nodes.Clear();
+                                Skeleton.bones.Clear();
+
+                                //Rebuild skeleton based on imported hierarchy order
+                                foreach (STBone importedBone in ImportedSkeleton.bones)
+                                {
+                                    BfresBone targetBone = null;
+                                    if (ExistingBones.ContainsKey(importedBone.Text))
+                                    {
+                                        targetBone = ExistingBones[importedBone.Text];
+                                        //CRITICAL: Update transform but KEEP flags and rotation type
+                                        //Smart Merge: Check tolerance to preserve original precision for boundary bones
+                                        const float TOLERANCE = 0.001f;
+                                        
+                                        if ((targetBone.Position - importedBone.Position).Length > TOLERANCE)
+                                            targetBone.Position = importedBone.Position;
+                                        
+                                        if ((targetBone.Scale - importedBone.Scale).Length > TOLERANCE)
+                                            targetBone.Scale = importedBone.Scale;
+                                            
+                                        //Check rotation difference (dot product close to 1 or -1 means same rotation)
+                                        float dot = targetBone.Rotation.X * importedBone.Rotation.X + 
+                                                    targetBone.Rotation.Y * importedBone.Rotation.Y + 
+                                                    targetBone.Rotation.Z * importedBone.Rotation.Z + 
+                                                    targetBone.Rotation.W * importedBone.Rotation.W;
+                                        if (Math.Abs(dot) < (1.0f - TOLERANCE))
+                                        {
+                                            if (targetBone.RotationType == STBone.BoneRotationType.Euler)
+                                                targetBone.EulerRotation = STMath.ToEulerAngles(importedBone.Rotation);
+                                            else
+                                                targetBone.Rotation = importedBone.Rotation;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        //New bone found in import
+                                        targetBone = new BfresBone(Skeleton);
+                                        targetBone.CloneBaseInstance(importedBone);
+                                        targetBone.Text = importedBone.Text;
+                                        if (IsWiiU)
+                                        {
+                                            if (targetBone.BoneU == null) targetBone.BoneU = new ResU.Bone();
+                                            if (targetBone.RotationType == STBone.BoneRotationType.Quaternion)
+                                                targetBone.BoneU.FlagsRotation = ResU.BoneFlagsRotation.Quaternion;
+                                            else
+                                                targetBone.BoneU.FlagsRotation = ResU.BoneFlagsRotation.EulerXYZ;
+                                        }
+                                        else
+                                        {
+                                            if (targetBone.Bone == null) targetBone.Bone = new Bone();
+                                            //Ensure new bones get correct flags from the get-go
+                                            if (targetBone.RotationType == STBone.BoneRotationType.Quaternion)
+                                                targetBone.Bone.FlagsRotation = BoneFlagsRotation.Quaternion;
+                                            else
+                                                targetBone.Bone.FlagsRotation = BoneFlagsRotation.EulerXYZ;
+                                        }
+                                    }
+                                    
+                                    NewBones.Add(targetBone);
+                                    if (targetBone.Bone != null) targetBone.Bone.Name = targetBone.Text;
+                                    if (targetBone.BoneU != null) targetBone.BoneU.Name = targetBone.Text;
+
+                                    Skeleton.bones.Add(targetBone);
+
+                                    //Update Parent-Child relationships
+                                    targetBone.parentIndex = importedBone.parentIndex;
+                                    
+                                    if (targetBone.parentIndex != -1 && targetBone.parentIndex < NewBones.Count)
+                                    {
+                                        BfresBone parent = NewBones[targetBone.parentIndex];
+                                        //Remove from previous parent if it was attached elsewhere
+                                        if (targetBone.Parent != null) ((TreeNodeCustom)targetBone.Parent).Nodes.Remove(targetBone);
+                                        parent.Nodes.Add(targetBone);
+                                    }
+                                    else
+                                    {
+                                        Skeleton.node.Nodes.Add(targetBone);
+                                    }
+                                }
+                                
+                                //Save changes to the underlying BFRES structure
                                 if (IsWiiU)
-                                    BfresWiiU.SaveSkeleton(Skeleton, ImportedSkeleton.bones);
+                                {
+                                   Skeleton.node.SkeletonU.Bones.Clear();
+                                    foreach (BfresBone bn in Skeleton.bones)
+                                    {
+                                        bn.GenericToBfresBone();
+                                        if (bn.BoneU != null)
+                                            Skeleton.node.SkeletonU.Bones.Add(bn.BoneU.Name, bn.BoneU);
+                                    }
+                                }
                                 else
-                                    BfresSwitch.SaveSkeleton(Skeleton, ImportedSkeleton.bones);
+                                {
+                                   Skeleton.node.Skeleton.Bones.Clear();
+                                   foreach (BfresBone bn in Skeleton.bones) {
+                                       bn.GenericToBfresBone();
+                                        if (bn.Bone != null)
+                                            Skeleton.node.Skeleton.Bones.Add(bn.Bone);
+                                   }
+                                }
+                                
+                                Skeleton.update();
+                                Skeleton.CalculateIndices(); //CRITICAL: Recalculate Inverse Bind Matrices for the new pose
+                                Skeleton.reset();
                             }
                         }
 
@@ -1432,6 +1558,14 @@ namespace Bfres.Structs
 
                     materials.Add(mat.Text, mat);
                     Nodes["FmatFolder"].Nodes.Add(mat);
+
+                    //Sync the dictionary to enforce order
+                    materials.Clear();
+                    foreach (FMAT m in Nodes["FmatFolder"].Nodes)
+                    {
+                        if (!materials.ContainsKey(m.Text))
+                            materials.Add(m.Text, m);
+                    }
                     break;
             }
         }

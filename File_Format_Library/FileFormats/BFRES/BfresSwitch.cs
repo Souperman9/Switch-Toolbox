@@ -757,6 +757,21 @@ namespace FirstPlugin
         public static void ReadTextureRefs(this FMAT m, Material mat)
         {
             m.TextureMaps.Clear();
+            m.HasDiffuseMap = false;
+            m.HasNormalMap = false;
+            m.HasSpecularMap = false;
+            m.HasEmissionMap = false;
+            m.HasDiffuseLayer = false;
+            m.HasTeamColorMap = false;
+            m.HasTransparencyMap = false;
+            m.HasShadowMap = false;
+            m.HasAmbientOcclusionMap = false;
+            m.HasLightMap = false;
+            m.HasSphereMap = false;
+            m.HasSubSurfaceScatteringMap = false;
+            m.HasMetalnessMap = false;
+            m.HasRoughnessMap = false;
+            m.HasMRA = false;
 
             int AlbedoCount = 0;
             int id = 0;
